@@ -1,0 +1,44 @@
+name: check
+on:
+  workflow_dispatch:
+  schedule:
+    # times are UTC (PST + 8). GitHub can run scheduled jobs 5-30 min late.
+    - cron: "0 4 18,19,20 11 *"   # Tue/Wed/Thu 8:00 pm PST - trend check
+    - cron: "0 4 21 11 *"         # Fri 8:00 pm PST - night before
+    - cron: "30 14 21 11 *"       # Sat 6:30 am PST - the morning call
+    - cron: "0 18 21 11 *"        # Sat 10:00 am PST - arriving Guerneville
+    - cron: "30 20 21 11 *"       # Sat 12:30 pm PST - before the chocolate tour
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency: { group: pages, cancel-in-progress: false }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: "${{ steps.deploy.outputs.page_url }}" }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run checks
+        env: { TZ: America/Los_Angeles }
+        run: |
+          python3 autocheck.py --out out
+          mkdir -p site/${{ vars.PAGE_PATH }}
+          echo '<!doctype html><title>.</title>' > site/index.html
+          cp out/status.html site/${{ vars.PAGE_PATH }}/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: deploy
+        uses: actions/deploy-pages@v4
+      - name: Push to phone
+        if: always() && steps.deploy.outcome != 'cancelled'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          PAGE_URL: ${{ vars.PAGE_URL }}
+        run: |
+          python3 - <<'PY'
+          import json, os, time, autocheck
+          d = json.load(open("out/status.json"))
+          url = os.environ["PAGE_URL"] + "?t=" + str(int(time.time()))
+          autocheck.notify(os.environ["NTFY_TOPIC"], d["plan"], open("out/status.txt").read(), url)
+          PY
