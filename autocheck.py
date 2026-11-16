@@ -142,7 +142,7 @@ def check_parks():
     closed_re = re.compile(r"\b(reserve|park|armstrong)\b[^.]{0,40}\b(is|are|will be|remains?)\s+closed|closed (today|due to|until)|"
                            r"pioneer trail[^.]{0,40}closed|armstrong woods road[^.]{0,40}closed|storm (closure|damage)", re.I)
     closure = [a for a in new if closed_re.search(a)]  # standing alerts are in the baseline
-    return dict(new=new, closure=closure, baseline=bool(base))
+    return dict(new=new, closure=closure, baseline=bool(base), all=alerts)
 
 
 def check_roads():

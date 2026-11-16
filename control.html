@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Big Q Control</title>
+<style>
+:root{
+  --bg:#F6F5F1;--bg2:#ECEAE3;--fg:#17140F;--fg2:#3A342B;--m:#6E675B;--r:#D6D1C5;
+  --a:#9A6F1C;--ok:#3F6B45;--warn:#A0661A;--crit:#B03A2E;--f:#3F5F74;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#100F0C;--bg2:#1A1814;--fg:#ECE8DF;--fg2:#B9B2A4;--m:#857D70;--r:#2C2820;
+  --a:#D6B266;--ok:#86B08A;--warn:#DDA555;--crit:#E5776A;--f:#8FB0C6;}}
+:root[data-theme="dark"]{--bg:#100F0C;--bg2:#1A1814;--fg:#ECE8DF;--fg2:#B9B2A4;--m:#857D70;--r:#2C2820;--a:#D6B266;--ok:#86B08A;--warn:#DDA555;--crit:#E5776A;--f:#8FB0C6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.4 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--a);text-underline-offset:2px}
+.mono,.k,.n{font-family:var(--mono)}
+.k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--m)}
+.n{font-variant-numeric:tabular-nums}
+.m{color:var(--m)}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.crit{color:var(--crit)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--m);margin-right:5px;vertical-align:1px}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.crit{background:var(--crit)}
+
+/* top strip */
+.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--fg);display:grid;grid-template-columns:repeat(6,minmax(0,1fr));}
+.top>div{padding:7px 10px;border-right:1px solid var(--r);min-width:0}
+.top .v{font:500 15px/1.25 var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .s{font-size:11px;color:var(--m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .v{font-family:ui-serif,Georgia,serif;font-size:17px}
+.brand .v em{color:var(--a)}
+
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1px;background:var(--r);border-bottom:1px solid var(--r)}
+.p{background:var(--bg);padding:10px 12px;min-width:0}
+.p>h2{margin:0 0 7px;font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--m);display:flex;justify-content:space-between;gap:8px}
+.p>h2 span{font-weight:400;letter-spacing:.04em;text-transform:none}
+.c3{grid-column:span 3}.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+
+.plan{font:400 22px/1.15 ui-serif,Georgia,serif;margin:2px 0 4px}
+.plan.ok{color:var(--ok)}.plan.warn{color:var(--warn)}
+ul.tight{margin:4px 0 0;padding-left:15px}ul.tight li{margin:1px 0}
+
+table{width:100%;border-collapse:collapse}
+td,th{padding:4px 5px;border-bottom:1px solid var(--r);text-align:left;vertical-align:top}
+th{font:400 9.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--m);white-space:nowrap}
+tr.now td{background:var(--bg2)}
+tr.now td:first-child{box-shadow:inset 3px 0 0 var(--a)}
+tr.past td{color:var(--m)}tr.past td a{color:var(--m)}
+tr.key td:nth-child(2) b{color:var(--a)}
+.tag{font:9px var(--mono);letter-spacing:.08em;text-transform:uppercase;border:1px solid currentColor;padding:0 3px;margin-left:4px;white-space:nowrap}
+.pop{display:inline-block;width:34px;height:6px;background:var(--bg2);position:relative;vertical-align:1px;margin-right:4px}
+.pop i{position:absolute;inset:0 auto 0 0;background:var(--f)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:6px}
+.stat{border:1px solid var(--r);padding:5px 7px}
+.stat .v{font:500 16px/1.2 var(--mono)}
+.stat .s{font-size:10.5px;color:var(--m)}
+
+.feed{font:11.5px/1.45 var(--mono);max-height:300px;overflow:auto}
+.feed div{display:grid;grid-template-columns:78px 1fr;gap:6px;padding:2px 0;border-bottom:1px dashed var(--r)}
+.feed .t{color:var(--m)}
+.al{border-left:2px solid var(--warn);padding:4px 8px;margin-bottom:4px;background:var(--bg2)}
+.al.ok{border-color:var(--ok)}.al.crit{border-color:var(--crit)}
+.rd{padding:3px 0;border-bottom:1px solid var(--r);font-size:12px}
+.rd b{font-family:var(--mono)}
+.radar img{width:100%;display:block;background:var(--bg2);min-height:120px}
+.seg button{font:10px var(--mono);background:var(--bg2);color:var(--fg);border:1px solid var(--r);padding:2px 6px;cursor:pointer}
+.seg button.on{border-color:var(--a);color:var(--a)}
+svg text{font:9px var(--mono);fill:var(--m)}
+.calc{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center}
+.calc input{font:13px var(--mono);background:var(--bg2);color:var(--fg);border:1px solid var(--r);padding:3px 5px;width:9.5em}
+.out{margin-top:6px;font-size:12.5px}
+.cont td:first-child{width:38%;font-weight:600}
+.cl label{display:grid;grid-template-columns:16px 1fr;gap:6px;padding:2px 0;font-size:12.5px;cursor:pointer}
+.cl label.done span{color:var(--m);text-decoration:line-through}
+.cl #checks{columns:3 14rem;column-gap:18px}.cl #checks>div{break-inside:avoid}.cl h3{font:600 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--m);margin:6px 0 2px}
+.links{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px}
+.btn{font:11px var(--mono);background:none;border:1px solid var(--r);color:var(--fg);padding:2px 7px;cursor:pointer}
+
+@media (max-width:1000px){.c3,.c4,.c5{grid-column:span 6}.c7,.c8{grid-column:span 12}.top{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){
+  .c3,.c4,.c5,.c6,.c7,.c8{grid-column:span 12}
+  .top{grid-template-columns:repeat(2,minmax(0,1fr));position:static}
+  .p{padding:10px 16px}.top>div{padding:6px 16px}
+  .hide-s{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand"><div class="k">Big Q · control</div><div class="v">Sat <em>21 Nov</em></div><div class="s">Sonoma · rain plan</div></div>
+  <div><div class="k">Now · PT</div><div class="v n" id="clock">--:--</div><div class="s" id="date">—</div></div>
+  <div><div class="k">Main event</div><div class="v n" id="tminus">—</div><div class="s">target 6:30 pm Sat</div></div>
+  <div><div class="k">Phase</div><div class="v" id="phase">—</div><div class="s" id="next">—</div></div>
+  <div><div class="k">Call</div><div class="v" id="topplan"><span class="dot"></span>—</div><div class="s" id="topplan-s">from server check</div></div>
+  <div><div class="k">Feeds</div><div class="v" id="feeds"><span class="dot"></span>—</div><div class="s"><button class="btn" id="refresh">refresh</button> <span id="feeds-s"></span></div></div>
+</div>
+
+<div class="grid">
+
+  <!-- decision -->
+  <div class="p c4">
+    <h2>Recommended call <span id="srv-age" class="m"></span></h2>
+    <div class="plan" id="plan">Loading…</div>
+    <div id="plan-sub" class="m"></div>
+    <ul class="tight" id="reasons"></ul>
+  </div>
+
+  <!-- route chart -->
+  <div class="p c5">
+    <h2>Saturday along the route <span>rain % bars · temp line · hour by hour at wherever you'll be</span></h2>
+    <div id="route"><span class="m">Loading…</span></div>
+  </div>
+
+  <!-- obs / stats -->
+  <div class="p c3">
+    <h2>Right now</h2>
+    <div class="stats" id="obs"></div>
+    <div class="stats" style="margin-top:6px">
+      <div class="stat"><div class="k">Sat rain</div><div class="v" id="qpf">—</div><div class="s">Guerneville 6a–10p</div></div>
+      <div class="stat"><div class="k">River</div><div class="v" id="riv">—</div><div class="s" id="riv-s">flood 32 ft</div></div>
+      <div class="stat"><div class="k">Sunset</div><div class="v">4:55</div><div class="s">dark ~5:25</div></div>
+    </div>
+  </div>
+
+  <!-- schedule tracker -->
+  <div class="p c8">
+    <h2>Run sheet · live <span>highlighted row = now · forecast per stop window</span></h2>
+    <div style="overflow-x:auto">
+    <table id="sched"><thead><tr><th>Time</th><th>Stop</th><th>Fcst</th><th class="hide-s">If it goes sideways</th><th>Go</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- alerts + river -->
+  <div class="p c4">
+    <h2>NWS alerts · Fri–Sun <span id="al-age" class="m"></span></h2>
+    <div id="alerts"><span class="m">Loading…</span></div>
+    <h2 style="margin-top:10px">Russian River · Guerneville <span><a href="https://water.noaa.gov/gauges/GUEC1" target="_blank" rel="noopener">gauge</a></span></h2>
+    <div id="river"><span class="m">Loading…</span></div>
+  </div>
+
+  <!-- radar -->
+  <div class="p c4 radar">
+    <h2>Radar loop <span class="seg"><button data-r="KMUX" class="on">Bay Area</button><button data-r="KDAX">Sacramento</button></span></h2>
+    <a id="radar-a" href="https://radar.weather.gov/station/KMUX/standard" target="_blank" rel="noopener"><img id="radar" alt="NWS radar loop" src="https://radar.weather.gov/ridge/standard/KMUX_loop.gif"></a>
+  </div>
+
+  <!-- roads + parks -->
+  <div class="p c4">
+    <h2>Roads · Caltrans <span><a href="https://quickmap.dot.ca.gov/" target="_blank" rel="noopener">QuickMap</a></span></h2>
+    <div id="roads"><span class="m">Loading…</span></div>
+    <h2 style="margin-top:10px">Armstrong Redwoods · State Parks <span><a href="https://www.parks.ca.gov/?page_id=450" target="_blank" rel="noopener">page</a></span></h2>
+    <div id="parks"><span class="m">Loading…</span></div>
+  </div>
+
+  <!-- datastream -->
+  <div class="p c4">
+    <h2>Datastream <span>server checks every 30 min Fri–Sat</span></h2>
+    <div class="feed" id="feed"></div>
+  </div>
+
+  <!-- late calculator -->
+  <div class="p c4">
+    <h2>Running late?</h2>
+    <div class="calc">
+      <span class="k">Left Sac at</span><input type="time" id="dep" value="08:30">
+      <span class="k">Cabin ETA</span><input type="time" id="cab" value="17:00">
+    </div>
+    <div class="out" id="calc-out"></div>
+    <div class="out" id="calc-out2"></div>
+  </div>
+
+  <!-- checklists -->
+  <div class="p c8 cl">
+    <h2>Checklists <span><button class="btn" id="clr">reset</button></span></h2>
+    <div id="checks"></div>
+  </div>
+
+  <!-- contingency -->
+  <div class="p c12">
+    <h2>Contingency playbook</h2>
+    <div style="overflow-x:auto">
+    <table class="cont"><thead><tr><th>Trigger</th><th>Do this</th></tr></thead><tbody id="cont"></tbody></table>
+    </div>
+  </div>
+
+  <div class="p c12">
+    <div class="links">
+      <a href="https://forecast.weather.gov/product.php?site=MTR&issuedby=MTR&product=AFD" target="_blank" rel="noopener">NWS forecast discussion</a>
+      <a href="https://forecast.weather.gov/MapClick.php?lat=38.5394&lon=-123.008&FcstType=graphical" target="_blank" rel="noopener">Hourly · Armstrong</a>
+      <a href="https://forecast.weather.gov/MapClick.php?lat=38.413&lon=-122.546&FcstType=graphical" target="_blank" rel="noopener">Hourly · Kenwood</a>
+      <a href="https://roads.dot.ca.gov/" target="_blank" rel="noopener">Caltrans conditions</a>
+      <a href="https://socoemergency.org/" target="_blank" rel="noopener">Sonoma Co emergency</a>
+      <a href="https://pgealerts.alerts.pge.com/outage-tools/outage-map/" target="_blank" rel="noopener">PG&amp;E outages</a>
+      <a href="status.html">Static fallback page</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+const SAC="38.5816,-121.4944",ARM="38.5394,-123.0080",GUE="38.5019,-122.9961",FOR="38.4935,-122.8850",SEB="38.4040,-122.8190",KEN="38.4130,-122.5460",GB="38.4180,-122.5530";
+const MAP=(o,d)=>"https://www.google.com/maps/dir/?api=1&travelmode=driving&origin="+encodeURIComponent(o)+"&destination="+encodeURIComponent(d);
+const SCHED=[
+ {d:"2026-11-20",s:"12:00",e:"18:00",n:"Brew bike",p:"Sacramento, her friends",ll:SAC,fb:"Sunny Fri. Go easy, you're driving at 8:30."},
+ {d:"2026-11-20",s:"21:00",e:"23:00",n:"Load car quietly",p:"Guitar under blanket · setup bag",ll:SAC,fb:"Do it before she's around, or at 7am."},
+ {d:"2026-11-21",s:"07:30",e:"08:30",n:"Morning check",p:"This page · pick the plan",ll:SAC,fb:"Tell her it's 'a redwoods walk', so any plan fits."},
+ {d:"2026-11-21",s:"08:30",e:"10:45",n:"Drive to Guerneville",p:"80 → 12 → 101 → River Rd · ~2h15 wet",ll:SAC,go:["Sacramento, CA","Armstrong Redwoods State Natural Reserve"],fb:"Late? Use the calculator."},
+ {d:"2026-11-21",s:"10:45",e:"12:15",n:"Armstrong Redwoods",p:"Pioneer Trail loop · $10 parking",ll:ARM,go:["","Armstrong Redwoods State Natural Reserve"],fb:"Closed → Grove of Old Trees, Occidental"},
+ {d:"2026-11-21",s:"12:30",e:"13:40",n:"Lunch",p:"Guerneville Main St",ll:GUE,go:["","Guerneville, CA"],fb:"Behind → grab-and-go, leave by 1:40"},
+ {d:"2026-11-21",s:"14:00",e:"14:30",n:"Chocolate tour",p:"6492 Mirabel Rd, Forestville",ll:FOR,hard:1,go:["","6492 Mirabel Rd, Forestville, CA"],fb:"Hard anchor. Late → call ahead"},
+ {d:"2026-11-21",s:"14:45",e:"16:15",n:"The Barlow",p:"Sebastopol · indoors",ll:SEB,go:["","The Barlow, Sebastopol, CA"],fb:"Flex block. Cut this first."},
+ {d:"2026-11-21",s:"16:15",e:"17:00",n:"Drive to Kenwood",p:"Hwy 12 via Santa Rosa · ~45 min",ll:SEB,go:["The Barlow, Sebastopol, CA","Kenwood, CA"],fb:"12 closed → Bennett Valley Rd → Glen Ellen"},
+ {d:"2026-11-21",s:"17:00",e:"18:30",n:"Check in · setup",p:"Cabin · she showers, you set up",ll:KEN,fb:"No shower → 'go check out the hot tub'"},
+ {d:"2026-11-21",s:"18:30",e:"19:00",n:"MAIN EVENT",p:"Living room · song, then the Q",ll:KEN,key:1,fb:"Latest start 7:30 to keep dinner"},
+ {d:"2026-11-21",s:"19:00",e:"20:10",n:"Celebrate · calls",p:"Champagne · FaceTime families",ll:KEN,fb:"Leave by 8:10"},
+ {d:"2026-11-21",s:"20:10",e:"20:30",n:"Drive to dinner",p:"Sonoma Hwy",ll:KEN,go:["","Golden Bear Station, 8445 Sonoma Hwy, Kenwood, CA"],fb:"Late → call to hold the table"},
+ {d:"2026-11-21",s:"20:30",e:"22:30",n:"Golden Bear Station",p:"8445 Sonoma Hwy · tell them it's an engagement",ll:GB,hard:1,fb:"Closed/issue → cabin + takeout"},
+ {d:"2026-11-21",s:"22:30",e:"23:59",n:"Hot tub",p:"Creekside",ll:KEN,fb:"Rain is a feature now"}
+];
+const CONT=[
+ ["Armstrong closed, trees down, or wind ≥ 25 mph","Grove of Old Trees, 17599 Fitzpatrick Ln, Occidental. ~1 mi of loops, lunch in Occidental, 15 min to Mirabel Rd."],
+ ["River forecast ≥ 29 ft or River Rd / Armstrong Woods Rd closed","Skip Guerneville. Ragle Ranch (Sebastopol) or the West County Trail, lunch in Graton/Sebastopol, then the tour."],
+ ["Heavy rain (≥ 1\" Sat daytime) or mud","West County Regional Trail from Forestville to Graton. Paved, lunch in Graton, 5 min to the tour."],
+ ["Left Sac after ~9:15","Shorten the redwoods. After ~10:15: redwoods 45 min + quick lunch. After ~11:00: skip the redwoods. See the calculator."],
+ ["Can't make 2:00 at the chocolate tour","Call them from the car: ask to join late or take a later slot. Otherwise go to The Barlow and the plan still works."],
+ ["Hwy 116 one-way control (Cnopius Rd, Edendale, through 11/30)","Budget +10 min on any 116 leg."],
+ ["Hwy 12 closed Santa Rosa → Kenwood","Bennett Valley Rd → Warm Springs/Arnold Dr (Glen Ellen) → Hwy 12 north. Add ~15 min."],
+ ["Cabin ETA after 6:00","Five-minute core setup: lamps low, LED candles, guitar tuned (capo 6), tripod recording. Start the main event by 7:30 latest."],
+ ["Check-in problem / door code","Call the host through the Airbnb app. Keep her in the car with the heater and music."],
+ ["She doesn't shower / stays in the room","'Go check out the hot tub / creek', or send her to grab something from the car. You need 5 minutes."],
+ ["Power outage at the cabin","LED candles + phone light, and the guitar is acoustic. Honestly better ambiance. Check the PG&E map for restoration."],
+ ["Guitar out of tune / string breaks","Clip tuner + spare strings in the bag. Worst case, play the track on the speaker and sing along, or just say it."],
+ ["Fumble mid-song","Keep strumming, keep singing. She'll remember that you did it."],
+ ["Running late for 8:30 dinner","Call Golden Bear Station to hold the table. Kenwood is minutes away."],
+ ["She spots the guitar","'I wanted to practice on the trip.' True enough."],
+ ["Ring delivery slips (lands Tue 11/17)","Track it. Not here by Thu → call the jeweler, hold at a carrier location, or pick it up yourself."],
+ ["Phone dies","Battery pack in the car. Screenshot this page Sat morning."],
+ ["Rough Friday night","Alarm by 7:15, water and coffee. A 9:30 departure still works with a shorter redwoods block."]
+];
+const CHECKS={
+ "Night before (Fri)":["Guitar in trunk, under a blanket","Clip tuner + spare strings + capo","Setup bag: LED candles, string lights, tripod, speaker","Champagne + flutes (in the cooler)","Flowers hidden in the cooler (optional)","Rain jackets, towel, dry socks","Battery pack + cables","Ring box in the setup bag"],
+ "Morning (Sat)":["Check this page at 7:30","Ring on body (front pocket)","$10 for Armstrong parking","Coffee + snacks for the drive","Screenshot this page"],
+ "At the cabin":["Guitar in on the 2nd trip","Tune immediately (cold car)","Lamps low, LED candles, lights","Tripod framed, hit record","Phones on silent","Ring out of the box, in your pocket, checked"]
+};
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const PLANS={A:"Plan A · Armstrong Redwoods",GROVE:"Backup · Grove of Old Trees",PAVED:"Backup · West County Trail (paved)",SKIP_GUERNEVILLE:"Backup · Skip Guerneville"};
+
+// ---- time in PT
+function pt(d){d=d||new Date();const f=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(d);const g=t=>f.find(x=>x.type===t).value;return{date:g("year")+"-"+g("month")+"-"+g("day"),h:+g("hour")%24,m:+g("minute"),s:+g("second")};}
+const toMin=s=>{const[a,b]=s.split(":").map(Number);return a*60+b};
+const fmt=m=>{m=Math.round(m);let h=Math.floor(m/60)%24,mm=((m%60)+60)%60;const ap=h>=12?"p":"a";h=h%12||12;return h+":"+String(mm).padStart(2,"0")+ap};
+const ago=iso=>{const s=(Date.now()-Date.parse(iso))/1000;return s<90?"just now":s<5400?Math.round(s/60)+" min ago":Math.round(s/3600)+" h ago"};
+
+function tick(){
+  const n=pt();$("clock").textContent=String(n.h).padStart(2,"0")+":"+String(n.m).padStart(2,"0");
+  $("date").textContent=new Date().toLocaleDateString("en-US",{timeZone:"America/Los_Angeles",weekday:"short",month:"short",day:"numeric"});
+  const ms=Date.parse("2026-11-21T18:30:00-08:00")-Date.now();
+  if(ms>0){const d=Math.floor(ms/864e5),h=Math.floor(ms/36e5)%24,m=Math.floor(ms/6e4)%60;$("tminus").textContent="T−"+(d?d+"d ":"")+h+"h "+String(m).padStart(2,"0")+"m";}
+  else $("tminus").innerHTML="<span class='ok'>GO ♥</span>";
+  // phase
+  const nowM=n.h*60+n.m;let cur=null,nxt=null;
+  SCHED.forEach((s,i)=>{const st=s.d<n.date?-1:s.d>n.date?1:0;s._state=st<0?"past":st>0?"future":(nowM>=toMin(s.e)?"past":nowM>=toMin(s.s)?"now":"future");if(s._state==="now")cur=s;if(!nxt&&s._state==="future")nxt=s;});
+  $("phase").textContent=cur?cur.n:(n.date<"2026-11-20"?"Pre-weekend":nxt?"Between stops":"Done ♥");
+  $("next").textContent=nxt?"Next: "+nxt.n+" "+(nxt.d!==n.date?nxt.d.slice(5).replace("-","/")+" ":"")+fmt(toMin(nxt.s)):"";
+  document.querySelectorAll("#sched tbody tr").forEach((tr,i)=>{tr.className=(SCHED[i]._state||"")+(SCHED[i].key?" key":"");});
+}
+
+// ---- data
+const cache={};
+function getJ(u,fresh){if(fresh||!cache[u])cache[u]=fetch(u+(fresh?(u.includes("?")?"&":"?")+"_="+Date.now():""),{headers:{Accept:"application/geo+json, application/json"}}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});return cache[u];}
+const point=ll=>getJ("https://api.weather.gov/points/"+ll).then(d=>d.properties);
+let feedOK=0,feedBad=0,clientLog=[];
+function clog(level,msg){clientLog.push({t:new Date().toISOString(),level,msg,client:1});renderFeed();}
+
+async function hourly(ll,fresh){const p=await point(ll);return(await getJ(p.forecastHourly,fresh)).properties.periods;}
+function win(periods,day,a,b){return periods.filter(x=>x.startTime.slice(0,10)===day&&toMin(x.startTime.slice(11,16))>=a&&toMin(x.startTime.slice(11,16))<b);}
+const popOf=x=>(x.probabilityOfPrecipitation&&x.probabilityOfPrecipitation.value)||0;
+
+async function loadSched(fresh){
+  const tb=$("sched").querySelector("tbody");
+  tb.innerHTML=SCHED.map((s,i)=>"<tr><td class='n'>"+(s.d==="2026-11-20"?"Fri ":"")+fmt(toMin(s.s))+"</td><td><b>"+esc(s.n)+"</b>"+(s.hard?"<span class='tag warn'>fixed</span>":"")+(s.key?"<span class='tag'>♥</span>":"")+"<div class='m'>"+esc(s.p)+"</div></td><td class='n' id='f"+i+"'>…</td><td class='hide-s m'>"+esc(s.fb||"")+"</td><td>"+(s.go?"<a href='"+MAP(s.go[0],s.go[1])+"' target='_blank' rel='noopener'>maps</a>":"")+"</td></tr>").join("");
+  tick();
+  for(let i=0;i<SCHED.length;i++){const s=SCHED[i];
+    try{const hrs=win(await hourly(s.ll,fresh),s.d,Math.floor(toMin(s.s)/60)*60,toMin(s.e));
+      if(!hrs.length){$("f"+i).innerHTML="<span class='m'>—</span>";continue;}
+      const p=Math.max(...hrs.map(popOf)),t=hrs.map(x=>x.temperature),w=Math.max(...hrs.map(x=>Math.max(...(x.windSpeed.match(/\d+/g)||[0]).map(Number))));
+      $("f"+i).innerHTML="<span class='pop'><i style='width:"+p+"%'></i></span>"+p+"% · "+Math.min(...t)+"–"+Math.max(...t)+"°"+(w>=15?" · <span class='warn'>"+w+"mph</span>":"");
+      feedOK++;
+    }catch(e){$("f"+i).innerHTML="<span class='warn'>n/a</span>";feedBad++;}
+  }
+}
+
+async function loadRoute(fresh){
+  const H=[];for(let h=6;h<=23;h++){const s=SCHED.filter(x=>x.d==="2026-11-21").find(x=>toMin(x.s)<=h*60+30&&h*60+30<toMin(x.e))||SCHED.filter(x=>x.d==="2026-11-21"&&toMin(x.s)<=h*60).pop()||SCHED[2];H.push({h,s});}
+  try{
+    for(const x of H){const per=await hourly(x.s.ll,fresh);const p=per.find(q=>q.startTime.slice(0,10)==="2026-11-21"&&+q.startTime.slice(11,13)===x.h);x.p=p?popOf(p):null;x.t=p?p.temperature:null;x.sky=p?p.shortForecast:"";}
+    const W=520,Hh=120,pad=18,bw=(W-pad*2)/H.length;const ts=H.filter(x=>x.t!=null).map(x=>x.t);const tmin=Math.min(...ts)-2,tmax=Math.max(...ts)+2;
+    let svg="<svg viewBox='0 0 "+W+" "+(Hh+36)+"' width='100%' role='img' aria-label='Saturday rain chance and temperature along the route'>";
+    [25,50,75,100].forEach(v=>{const y=Hh-v/100*(Hh-10);svg+="<line x1='"+pad+"' x2='"+(W-pad)+"' y1='"+y+"' y2='"+y+"' stroke='var(--r)' stroke-width='.5'/>";});
+    const n=pt();
+    H.forEach((x,i)=>{const X=pad+i*bw;if(x.p!=null){const h=x.p/100*(Hh-10);svg+="<rect x='"+(X+1)+"' y='"+(Hh-h)+"' width='"+(bw-2)+"' height='"+h+"' fill='var(--f)' opacity='"+(x.s.key?1:.75)+"'><title>"+fmt(x.h*60)+" "+esc(x.s.n)+": "+x.p+"% · "+x.t+"° · "+esc(x.sky)+"</title></rect>";}
+      if(i%2===0)svg+="<text x='"+(X+bw/2)+"' y='"+(Hh+11)+"' text-anchor='middle'>"+(x.h%12||12)+"</text>";});
+    const pts=H.map((x,i)=>x.t==null?null:[pad+i*bw+bw/2,Hh-(x.t-tmin)/(tmax-tmin)*(Hh-14)-4]).filter(Boolean);
+    svg+="<polyline points='"+pts.map(p=>p.join(",")).join(" ")+"' fill='none' stroke='var(--a)' stroke-width='1.5'/>";
+    pts.forEach((p,i)=>{if(i%3===0)svg+="<text x='"+p[0]+"' y='"+(p[1]-4)+"' text-anchor='middle' style='fill:var(--a)'>"+H[i].t+"°</text>";});
+    // stop labels
+    let last=null,k=0;H.forEach((x,i)=>{if(x.s!==last){svg+="<text x='"+(pad+i*bw+1)+"' y='"+(Hh+(k++%2?32:22))+"'>"+esc(x.s.n.replace("Drive to ","→").split(" ")[0].slice(0,8))+"</text>";svg+="<line x1='"+(pad+i*bw)+"' x2='"+(pad+i*bw)+"' y1='0' y2='"+(Hh+16)+"' stroke='var(--r)' stroke-width='.5'/>";last=x.s;}});
+    if(n.date==="2026-11-21"&&n.h>=6){const X=pad+((n.h-6)+n.m/60)*bw;svg+="<line x1='"+X+"' x2='"+X+"' y1='0' y2='"+Hh+"' stroke='var(--crit)' stroke-width='1.5'/>";}
+    svg+="</svg>";$("route").innerHTML=svg;feedOK++;
+  }catch(e){$("route").innerHTML="<span class='warn'>Route forecast unavailable</span>";feedBad++;}
+}
+
+async function loadObs(fresh){
+  const st=[["KSAC","Sacramento"],["KSTS","Santa Rosa"]];let h="";
+  for(const[id,name]of st){try{const p=(await getJ("https://api.weather.gov/stations/"+id+"/observations/latest",fresh)).properties;
+    const F=c=>c==null?"—":Math.round(c*9/5+32)+"°",mph=k=>k==null?null:Math.round(k*0.621);
+    const w=mph(p.windSpeed&&p.windSpeed.value),g=mph(p.windGust&&p.windGust.value),pr=p.precipitationLastHour&&p.precipitationLastHour.value;
+    h+="<div class='stat'><div class='k'>"+name+"</div><div class='v'>"+F(p.temperature&&p.temperature.value)+"</div><div class='s'>"+esc(p.textDescription||"")+(w!=null?" · "+w+(g?"g"+g:"")+"mph":"")+(pr?" · "+(pr/25.4).toFixed(2)+"\"/hr":"")+"<br>"+ago(p.timestamp)+"</div></div>";feedOK++;
+  }catch(e){h+="<div class='stat'><div class='k'>"+name+"</div><div class='v'>—</div><div class='s'>n/a</div></div>";feedBad++;}}
+  $("obs").innerHTML=h;
+}
+
+async function loadAlerts(fresh){
+  const seen={},out=[];const a0=Date.parse("2026-11-20T08:00:00Z"),a1=Date.parse("2026-11-23T08:00:00Z");
+  try{for(const ll of[SAC,ARM,SEB,KEN]){const d=await getJ("https://api.weather.gov/alerts/active?point="+ll,fresh);
+    d.features.forEach(f=>{const a=f.properties;if(seen[a.id])return;seen[a.id]=1;const s=Date.parse(a.onset||a.effective||a.sent),e=Date.parse(a.ends||a.expires||"2026-11-23T08:00:00Z");if(e<a0||s>a1)return;
+      const lvl=/Warning/.test(a.event)?"crit":"";out.push("<div class='al "+lvl+"'><b>"+esc(a.event)+"</b> <span class='m'>"+esc((a.headline||"").replace(/ by NWS.*/,""))+"</span></div>");});}
+    $("alerts").innerHTML=out.join("")||"<div class='al ok'>None touching Fri–Sun.</div>";$("al-age").textContent="live";feedOK++;
+  }catch(e){$("alerts").innerHTML="<span class='warn'>Alerts unavailable</span>";feedBad++;}
+}
+
+async function loadRiver(fresh){
+  try{const g=await getJ("https://api.water.noaa.gov/nwps/v1/gauges/GUEC1",fresh),sf=await getJ("https://api.water.noaa.gov/nwps/v1/gauges/GUEC1/stageflow",fresh);
+    const act=g.flood.categories.action.stage,fl=g.flood.categories.minor.stage;
+    const ob=(sf.observed&&sf.observed.data||[]).slice(-96),fc=(sf.forecast&&sf.forecast.data||[]);
+    const all=ob.concat(fc);const pk=fc.length?fc.reduce((m,x)=>x.primary>m.primary?x:m,fc[0]):null;
+    const now=g.status.observed.primary;$("riv").textContent=now.toFixed(1)+"′";$("riv").className="v "+(now>=fl?"crit":now>=act?"warn":"");
+    $("riv-s").textContent="peak "+(pk?pk.primary.toFixed(1):"?")+"′ · flood "+fl;
+    const W=320,H=60,t0=Date.parse(all[0].validTime),t1=Date.parse(all[all.length-1].validTime),vmax=Math.max(10,...all.map(x=>x.primary))*1.15;
+    const X=t=>(Date.parse(t)-t0)/(t1-t0)*W,Y=v=>H-v/vmax*H;
+    let s="<svg viewBox='0 0 "+W+" "+(H+12)+"' width='100%'>";
+    [[act,"action"],[fl,"flood"]].forEach(([v,l])=>{if(v<vmax)s+="<line x1='0' x2='"+W+"' y1='"+Y(v)+"' y2='"+Y(v)+"' stroke='var(--crit)' stroke-dasharray='3 3'/><text x='2' y='"+(Y(v)-2)+"'>"+l+" "+v+"′</text>";});
+    s+="<polyline fill='none' stroke='var(--f)' stroke-width='1.5' points='"+ob.map(x=>X(x.validTime)+","+Y(x.primary)).join(" ")+"'/>";
+    s+="<polyline fill='none' stroke='var(--f)' stroke-width='1.5' stroke-dasharray='4 2' points='"+fc.map(x=>X(x.validTime)+","+Y(x.primary)).join(" ")+"'/>";
+    const sat=Date.parse("2026-11-21T08:00:00Z");if(sat>t0&&sat<t1)s+="<line x1='"+X("2026-11-21T08:00:00Z")+"' x2='"+X("2026-11-21T08:00:00Z")+"' y1='0' y2='"+H+"' stroke='var(--a)'/><text x='"+(X("2026-11-21T08:00:00Z")+2)+"' y='"+(H+10)+"' style='fill:var(--a)'>Sat</text>";
+    s+="<text x='2' y='"+(H+10)+"'>solid = observed · dashed = forecast · max "+vmax.toFixed(0)+"′</text></svg>";
+    $("river").innerHTML="<div class='m' style='font-size:11.5px'>Now <b class='n'>"+now.toFixed(2)+" ft</b>"+(pk?" · forecast peak <b class='n'>"+pk.primary.toFixed(1)+" ft</b> "+new Date(pk.validTime).toLocaleString("en-US",{timeZone:"America/Los_Angeles",weekday:"short",hour:"numeric"}):"")+" · action "+act+" · flood "+fl+"</div>"+s;feedOK++;
+  }catch(e){$("river").innerHTML="<span class='warn'>River data unavailable</span>";feedBad++;}
+}
+
+let server=null;
+async function loadServer(){
+  try{server=await fetch("status.json?_="+Date.now()).then(r=>{if(!r.ok)throw 0;return r.json()});
+    const plan=server.plan,cls=plan==="A"?"ok":"warn";
+    $("plan").textContent=PLANS[plan]||plan;$("plan").className="plan "+cls;
+    $("reasons").innerHTML=(server.reasons||[]).map(r=>"<li>"+esc(r)+"</li>").join("");
+    $("srv-age").textContent="checked "+ago(server.iso);
+    $("topplan").innerHTML="<span class='dot "+cls+"'></span>"+esc((PLANS[plan]||plan).replace("Backup · ","B: ").replace("Plan A · ","A: "));
+    $("topplan-s").textContent="server "+ago(server.iso);
+    $("qpf").textContent=(server.rain_in!=null?server.rain_in:"—")+"\"";
+    const rd=server.roads||{};$("roads").innerHTML=Object.keys(rd).map(k=>{const t=rd[k],bad=/closed/i.test(t),meh=/1-way|controlled|chain|advisory/i.test(t);return"<div class='rd'><b class='"+(bad?"crit":meh?"warn":"ok")+"'>"+k+"</b> "+esc(t.replace(/\[IN THE ([^\]]+)\]/g,"[$1]").slice(0,320))+"</div>"}).join("")||"<span class='m'>—</span>";
+    const pk=server.parks||{};const nw=new Set(pk.new||[]);
+    $("parks").innerHTML=(pk.all||[]).filter(a=>!/^No Drones|^Parking for Armstrong/.test(a)).map(a=>"<div class='al "+(nw.has(a)?"crit":"ok")+"'>"+(nw.has(a)?"<b>NEW</b> ":"")+esc(a.slice(0,260))+"</div>").join("")+((pk.closure||[]).length?"":"<div class='m' style='font-size:11px'>No closure language detected. Parking $10/vehicle.</div>");
+    renderFeed();feedOK++;
+  }catch(e){$("plan").textContent="Server status unavailable";$("srv-age").textContent="";feedBad++;}
+}
+
+function renderFeed(){
+  const L=((server&&server.log)||[]).concat(clientLog).sort((a,b)=>Date.parse(b.t)-Date.parse(a.t)).slice(0,120);
+  $("feed").innerHTML=L.map(e=>"<div><span class='t'>"+new Date(e.t).toLocaleString("en-US",{timeZone:"America/Los_Angeles",weekday:"short",hour:"numeric",minute:"2-digit"})+"</span><span class='"+(e.level==="crit"?"crit":e.level==="warn"?"warn":"")+"'>"+(e.client?"[page] ":"")+esc(e.msg)+"</span></div>").join("")||"<span class='m'>No events yet.</span>";
+}
+
+// ---- calculator
+function calc(){
+  const dep=toMin($("dep").value||"08:30"),arr=dep+135,leave=13*60+40,avail=leave-arr;let o;
+  if(arr>=14*60-10)o="<b class='crit'>Can't make 2:00 via Guerneville.</b> Sac → Forestville is ~2h05 ("+fmt(dep+125)+"). "+(dep+125>14*60?"Call the chocolate place to push. Otherwise go straight to The Barlow.":"Drive straight to Mirabel Rd and eat after the tour.");
+  else if(avail>=150)o="<b class='ok'>Full plan.</b> Arrive "+fmt(arr)+". Redwoods "+fmt(arr)+"–"+fmt(arr+90)+", lunch until 1:40.";
+  else if(avail>=105)o="<b class='ok'>Slightly short.</b> Arrive "+fmt(arr)+". Redwoods "+(avail-60)+" min, sit-down lunch 60 min, leave 1:40.";
+  else if(avail>=70)o="<b class='warn'>Tight.</b> Arrive "+fmt(arr)+". Redwoods 45 min, then grab-and-go lunch, leave 1:40.";
+  else if(avail>=30)o="<b class='warn'>Skip the redwoods walk.</b> Arrive "+fmt(arr)+". Lunch in Guerneville, then the tour. Drive Armstrong Woods Rd for a quick look at the trees.";
+  else o="<b class='warn'>Go straight to Forestville.</b> Arrive ~"+fmt(dep+125)+". Lunch after the tour in Sebastopol.";
+  $("calc-out").innerHTML=o;
+  const cab=toMin($("cab").value||"17:00");const me=Math.max(cab+60,18*60+30);let o2;
+  if(cab<=17*60+30)o2="<b class='ok'>On plan.</b> Main event ~"+fmt(me)+", "+Math.round((20*60+10-me-30)/5)*5+" min to celebrate before leaving at 8:10.";
+  else if(cab<=18*60+30)o2="<b class='warn'>Compress setup to 5 min.</b> Main event ~"+fmt(cab+40)+". Leave for dinner 8:10.";
+  else if(cab<=19*60+30)o2="<b class='crit'>Short window.</b> Core setup only, main event by "+fmt(cab+20)+", or after dinner by the hot tub. Call Golden Bear if needed.";
+  else o2="<b class='crit'>Go to dinner first (8:30).</b> Main event after dinner at the cabin. The setup can happen while she changes.";
+  $("calc-out2").innerHTML=o2;
+}
+
+// ---- checklists
+function renderChecks(){let st={};try{st=JSON.parse(localStorage.getItem("bq-checks")||"{}")}catch(e){}
+  $("checks").innerHTML=Object.keys(CHECKS).map(g=>"<div><h3>"+esc(g)+"</h3>"+CHECKS[g].map((t,i)=>{const id=g+"|"+i;return"<label class='"+(st[id]?"done":"")+"'><input type='checkbox' data-id='"+esc(id)+"'"+(st[id]?" checked":"")+"><span>"+esc(t)+"</span></label>"}).join("")+"</div>").join("");
+  $("checks").querySelectorAll("input").forEach(cb=>cb.onchange=()=>{st[cb.dataset.id]=cb.checked;cb.parentNode.className=cb.checked?"done":"";try{localStorage.setItem("bq-checks",JSON.stringify(st))}catch(e){}});
+  $("clr").onclick=()=>{try{localStorage.removeItem("bq-checks")}catch(e){}renderChecks();};
+}
+
+$("cont").innerHTML=CONT.map(r=>"<tr><td>"+esc(r[0])+"</td><td>"+esc(r[1])+"</td></tr>").join("");
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".seg button").forEach(x=>x.classList.toggle("on",x===b));$("radar").src="https://radar.weather.gov/ridge/standard/"+b.dataset.r+"_loop.gif?_="+Date.now();$("radar-a").href="https://radar.weather.gov/station/"+b.dataset.r+"/standard";});
+$("dep").oninput=calc;$("cab").oninput=calc;
+
+async function loadAll(fresh){
+  feedOK=0;feedBad=0;$("feeds").innerHTML="<span class='dot'></span>loading";
+  await Promise.all([loadServer(),loadSched(fresh),loadObs(fresh),loadAlerts(fresh),loadRiver(fresh)]);
+  await loadRoute(false);
+  if(fresh){const r=$("radar");r.src=r.src.split("?")[0]+"?_="+Date.now();}
+  $("feeds").innerHTML="<span class='dot "+(feedBad?"warn":"ok")+"'></span>"+(feedBad?feedBad+" failed":"all live");
+  $("feeds-s").textContent=new Date().toLocaleTimeString("en-US",{timeZone:"America/Los_Angeles",hour:"numeric",minute:"2-digit"});
+  clog(feedBad?"warn":"info","Live refresh: "+feedOK+" feeds OK"+(feedBad?", "+feedBad+" failed":""));
+}
+$("refresh").onclick=()=>loadAll(true);
+renderChecks();calc();tick();setInterval(tick,15000);
+loadAll(false);setInterval(()=>loadAll(true),10*60*1000);
+})();
+</script>
+</body>
+</html>

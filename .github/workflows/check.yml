@@ -2,12 +2,15 @@ name: check
 on:
   workflow_dispatch:
   schedule:
-    # times are UTC (PST + 8). GitHub can run scheduled jobs 5-30 min late.
-    - cron: "0 4 18,19,20 11 *"   # Tue/Wed/Thu 8:00 pm PST - trend check
-    - cron: "0 4 21 11 *"         # Fri 8:00 pm PST - night before
-    - cron: "30 14 21 11 *"       # Sat 6:30 am PST - the morning call
-    - cron: "0 18 21 11 *"        # Sat 10:00 am PST - arriving Guerneville
-    - cron: "30 20 21 11 *"       # Sat 12:30 pm PST - before the chocolate tour
+    # UTC (PST + 8). GitHub may start scheduled runs 5-30 min late.
+    - cron: "0 4 18,19,20 11 *"   # KEY  Tue/Wed/Thu 8:00 pm PST
+    - cron: "0 4 21 11 *"         # KEY  Fri 8:00 pm PST
+    - cron: "30 14 21 11 *"       # KEY  Sat 6:30 am PST
+    - cron: "0 18 21 11 *"        # KEY  Sat 10:00 am PST
+    - cron: "30 20 21 11 *"       # KEY  Sat 12:30 pm PST
+    - cron: "15,45 20-23 20 11 *" # monitor Fri 12:15-3:45 pm PST
+    - cron: "15,45 * 21 11 *"     # monitor Fri 4:15 pm - Sat 3:45 pm PST
+    - cron: "15,45 0-7 22 11 *"   # monitor Sat 4:15 - 11:45 pm PST
 permissions:
   contents: read
   pages: write
@@ -20,25 +23,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run checks
-        env: { TZ: America/Los_Angeles }
+        env:
+          TZ: America/Los_Angeles
+          PAGE_URL: ${{ vars.PAGE_URL }}
+          CRON: ${{ github.event.schedule }}
+          EVENT: ${{ github.event_name }}
         run: |
-          python3 autocheck.py --out out
-          mkdir -p site/${{ vars.PAGE_PATH }}
+          D=site/${{ vars.PAGE_PATH }}
+          mkdir -p $D
           echo '<!doctype html><title>.</title>' > site/index.html
-          cp out/status.html site/${{ vars.PAGE_PATH }}/index.html
+          python3 run.py $D
+          cp control.html $D/index.html
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
       - id: deploy
         uses: actions/deploy-pages@v4
       - name: Push to phone
-        if: always() && steps.deploy.outcome != 'cancelled'
+        if: always() && hashFiles('notify.json') != ''
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           PAGE_URL: ${{ vars.PAGE_URL }}
         run: |
           python3 - <<'PY'
           import json, os, time, autocheck
-          d = json.load(open("out/status.json"))
-          url = os.environ["PAGE_URL"] + "?t=" + str(int(time.time()))
-          autocheck.notify(os.environ["NTFY_TOPIC"], d["plan"], open("out/status.txt").read(), url)
+          n = json.load(open("notify.json"))
+          autocheck.notify(os.environ["NTFY_TOPIC"], n["plan"], n["body"], os.environ["PAGE_URL"] + "?t=" + str(int(time.time())))
           PY
