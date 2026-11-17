@@ -48,6 +48,9 @@ def main():
             add("crit", f"PLAN CHANGE {prev.get('plan')} → {plan} ({detail['title']}): {reasons[0]}")
         elif (prev.get("detail") or {}).get("sub") not in (None, detail["sub"]):
             add("info", f"Itinerary adjusted: {detail['sub']}")
+        pv, nv = ((prev.get("detail") or {}).get("venue") or {}).get("id"), (detail.get("venue") or {}).get("id")
+        if pv and nv and pv != nv:
+            add("warn", f"Evening spot {pv} → {nv}: {detail['venue']['title']}")
         pa = {a["event"] + "|" + a["headline"] for a in prev.get("alerts", [])}
         na = {a["event"] + "|" + a["headline"] for a in r.get("alerts", [])}
         for a in sorted(na - pa): add("warn", "NEW NWS alert: " + a.split("|")[0] + ". " + a.split("|")[1][:140])

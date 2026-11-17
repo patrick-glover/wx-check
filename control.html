@@ -218,7 +218,7 @@ const SCHED=[
  {d:"2026-11-21",s:"14:45",e:"16:15",n:"The Barlow",p:"Sebastopol · indoors",ll:SEB,go:["","The Barlow, Sebastopol, CA"],fb:"Flex block. Cut this first."},
  {d:"2026-11-21",s:"16:15",e:"17:00",n:"Drive to Kenwood",p:"Hwy 12 via Santa Rosa · ~45 min",ll:SEB,go:["The Barlow, Sebastopol, CA","Kenwood, CA"],fb:"12 closed → Bennett Valley Rd → Glen Ellen"},
  {d:"2026-11-21",s:"17:00",e:"18:30",n:"Check in · setup",p:"Cabin · she showers, you set up",ll:KEN,fb:"No shower → 'go check out the hot tub'"},
- {d:"2026-11-21",s:"18:30",e:"19:00",n:"MAIN EVENT",p:"Living room · song, then the Q",ll:KEN,key:1,fb:"Latest start 7:30 to keep dinner"},
+ {d:"2026-11-21",s:"18:30",e:"19:00",n:"MAIN EVENT",p:"Deck over the creek if dry · Franklin fireplace room if not · song, then the Q",ll:KEN,key:1,fb:"Latest start 7:30 to keep dinner"},
  {d:"2026-11-21",s:"19:00",e:"20:10",n:"Celebrate · calls",p:"Champagne · FaceTime families",ll:KEN,fb:"Leave by 8:10"},
  {d:"2026-11-21",s:"20:10",e:"20:30",n:"Drive to dinner",p:"Sonoma Hwy",ll:KEN,go:["","Golden Bear Station, 8445 Sonoma Hwy, Kenwood, CA"],fb:"Late → call to hold the table"},
  {d:"2026-11-21",s:"20:30",e:"22:30",n:"Golden Bear Station",p:"8445 Sonoma Hwy · tell them it's an engagement",ll:GB,hard:1,fb:"Closed/issue → cabin + takeout"},
@@ -234,9 +234,13 @@ const CONT=[
  ["Can't make 2:00 at the chocolate tour","Call them from the car: ask to join late or take a later slot. Otherwise go to The Barlow and the plan still works."],
  ["Hwy 116 one-way control (Cnopius Rd, Edendale, through 11/30)","Budget +10 min on any 116 leg."],
  ["Hwy 12 closed Santa Rosa → Kenwood","Bennett Valley Rd → Warm Springs/Arnold Dr (Glen Ellen) → Hwy 12 north. Add ~15 min."],
+ ["Clear, dry evening (the long shot)","Back deck over the creek, open to the sky: string lights, LED candles on the deck tables, firepit going, blanket. Or under the oak tree by the hot tub. Guitar sounds great outside; acoustic is fine under the house rules (no amplified outdoor music)."],
+ ["Rain or wind at the cabin","Room with the red Franklin fireplace. Fire going, lamps low, LED candles. Deck and hot tub after dinner if it clears."],
+ ["Iffy evening (20–40% rain)","Set up by the fireplace first (it's the safe version), then string lights on the deck only if it's dry when you arrive."],
  ["Cabin ETA after 6:00","Five-minute core setup: lamps low, LED candles, guitar tuned (capo 6), tripod recording. Start the main event by 7:30 latest."],
  ["Check-in problem / door code","Call the host through the Airbnb app. Keep her in the car with the heater and music."],
  ["She doesn't shower / stays in the room","'Go check out the hot tub / creek', or send her to grab something from the car. You need 5 minutes."],
+ ["House rules","Quiet hours 9pm–8am, no amplified outdoor music, no glass near the hot tub (plastic flutes for the tub), registered guests only (clear any buddy drop-off with the host first)."],
  ["Power outage at the cabin","LED candles + phone light, and the guitar is acoustic. Honestly better ambiance. Check the PG&E map for restoration."],
  ["Guitar out of tune / string breaks","Clip tuner + spare strings in the bag. Worst case, play the track on the speaker and sing along, or just say it."],
  ["Fumble mid-song","Keep strumming, keep singing. She'll remember that you did it."],
@@ -247,7 +251,7 @@ const CONT=[
  ["Rough Friday night","Alarm by 7:15, water and coffee. A 9:30 departure still works with a shorter redwoods block."]
 ];
 const CHECKS={
- "Night before (Fri)":["Guitar in trunk, under a blanket","Clip tuner + spare strings + capo","Setup bag: LED candles, string lights, tripod, speaker","Champagne + flutes (in the cooler)","Flowers hidden in the cooler (optional)","Rain jackets, towel, dry socks","Battery pack + cables","Ring box in the setup bag"],
+ "Night before (Fri)":["Guitar in trunk, under a blanket","Clip tuner + spare strings + capo","Setup bag: LED candles, string lights, tripod, speaker","Champagne + flutes (in the cooler) + plastic cups for the hot tub","Firepit lighter + blanket (deck version)","Flowers hidden in the cooler (optional)","Rain jackets, towel, dry socks","Battery pack + cables","Ring box in the setup bag"],
  "Morning (Sat)":["Check this page at 7:30","Ring on body (front pocket)","$10 for Armstrong parking","Coffee + snacks for the drive","Screenshot this page"],
  "At the cabin":["Guitar in on the 2nd trip","Tune immediately (cold car)","Lamps low, LED candles, lights","Tripod framed, hit record","Phones on silent","Ring out of the box, in your pocket, checked"]
 };
@@ -364,7 +368,7 @@ async function loadServer(){
   try{server=await fetch("status.json?_="+Date.now()).then(r=>{if(!r.ok)throw 0;return r.json()});
     const plan=server.plan,cls=plan==="A"?"ok":"warn",dt=server.detail||{},title=dt.title||PLANS[plan]||plan;
     $("plan").textContent=title;$("plan").className="plan "+cls;$("plan-sub").textContent=dt.sub||"";
-    $("flip").innerHTML=(dt.flip?esc(dt.flip):"")+(dt.runner_up?"<br>Runner-up: "+esc(dt.runner_up.title):"");
+    $("flip").innerHTML=(dt.venue?"<b>♥ "+esc(dt.venue.title)+"</b><br>"+esc(dt.venue.note)+"<br><br>":"")+(dt.flip?esc(dt.flip):"")+(dt.runner_up?"<br>Runner-up: "+esc(dt.runner_up.title):"");
     $("itin").innerHTML=(dt.steps||[]).map(x=>"<tr><td class='n'>"+esc(x.t)+"</td><td><b>"+esc(x.name)+"</b> <span class='m'>"+esc(x.note||"")+"</span></td></tr>").join("");
     $("reasons").innerHTML=(server.reasons||[]).map(r=>"<li>"+esc(r)+"</li>").join("");
     $("srv-age").textContent="checked "+ago(server.iso);

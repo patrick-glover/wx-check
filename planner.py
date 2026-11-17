@@ -293,6 +293,33 @@ def flip(f, result, dep="08:30"):
     u = UNIT.get(fact, "")
     return f"Flips if {LABEL[fact]} ≥ {thr}{u} (now {v}{u}) → {alt['title']}"
 
+# ---------------------------------------------------------------- evening venue
+# The proposal is at the cabin either way; the weather picks the spot.
+# Deck needs a genuinely dry evening, since it's open to the sky over the creek.
+DECK_POP = 20     # %, max hourly rain chance 5-8 pm at the cabin
+DECK_WIND = 12    # mph, candles and string lights
+MAYBE_POP = 40    # up to this: set up inside, step out if it's dry
+
+
+def venue(f):
+    pop, wind, temp = f.get("cabin_pop"), f.get("cabin_wind"), f.get("cabin_temp")
+    cold = f" It'll be ~{temp}°: light the firepit, bring a blanket out." if temp is not None else ""
+    if pop is None or wind is None:
+        return dict(id="FIRE", title="Main event · Franklin fireplace room",
+                     note="Cabin forecast unavailable, so plan for inside. Check the sky when you arrive.")
+    if pop < DECK_POP and wind < DECK_WIND:
+        return dict(id="DECK", title="Main event · back deck over the creek ✨",
+                    note=f"Dry evening ({pop}% rain, ≤{wind} mph). String lights + LED candles on the deck tables, "
+                         f"or under the oak by the hot tub.{cold}")
+    if pop <= MAYBE_POP and wind < DECK_WIND:
+        return dict(id="FIRE_MAYBE", title="Main event · fireplace room (deck if dry)",
+                    note=f"{pop}% rain 5–8 pm. Set up by the red Franklin fireplace; if it's dry when you get there, "
+                         f"string lights on the deck and do it outside.")
+    why = f"{pop}% rain" if pop > MAYBE_POP else f"wind {wind} mph"
+    return dict(id="FIRE", title="Main event · Franklin fireplace room",
+                note=f"{why} 5–8 pm. Fire going, lamps low, LED candles. Hot tub after dinner.")
+
+
 # ---------------------------------------------------------------- facts from checks
 
 def facts(r):
@@ -308,6 +335,10 @@ def facts(r):
     f["wind_mph"] = arm["wind"] if arm else None
     west = [x for x in rows if x["name"] in ("Armstrong Redwoods", "Lunch · Guerneville", "Chocolate tour · Forestville")]
     f["thunder"] = any(x.get("thunder") for x in west) if west else None
+    cab = next((x for x in rows if x["name"] == "Cabin · Kenwood"), None)
+    f["cabin_pop"] = cab["pop"] if cab else None
+    f["cabin_wind"] = cab["wind"] if cab else None
+    f["cabin_temp"] = cab["tmin"] if cab else None
     alerts = r.get("alerts")
     if alerts is None or any(a["event"] == "(alert check failed)" for a in alerts):
         f["wind_alert"] = None
@@ -326,6 +357,7 @@ def run(r):
     f = facts(r)
     p = plan(f)
     p["flip"] = flip(f, p)
+    p["venue"] = venue(f)
     p["facts"] = f
     p["by_departure"] = [dict(dep=f"{m // 60:02d}:{m % 60:02d}", **{k: q[k] for k in ("id", "title", "sub")})
                          for m in range(7 * 60 + 30, 12 * 60 + 1, 15) for q in [plan(f, m)]]

@@ -214,7 +214,9 @@ def render_html(r, p, reasons, stamp):
     e = html.escape
     title, sub = p["title"], p["sub"]
     steps = "".join(f"<tr><td class=n>{e(x['t'])}</td><td><b>{e(x['name'])}</b><br><span class=m>{e(x.get('note',''))}</span></td></tr>" for x in p["steps"])
-    extra = (f"<div class=m style='margin-top:8px'>{e(p['flip'])}</div>" if p.get("flip") else "") + \
+    v = p.get("venue")
+    extra = (f"<div style='margin-top:10px'><b>{e(v['title'])}</b><br><span class=m>{e(v['note'])}</span></div>" if v else "") + \
+            (f"<div class=m style='margin-top:8px'>{e(p['flip'])}</div>" if p.get("flip") else "") + \
             (f"<div class=m>Runner-up: {e(p['runner_up']['title'])}</div>" if p.get("runner_up") else "")
     rows = ""
     for x in r.get("forecast", []):
@@ -279,6 +281,7 @@ def render_txt(r, p, reasons, stamp):
     arm = next((x for x in r.get("forecast", []) if x["name"] == "Armstrong Redwoods" and "pop" in x), None)
     lines = [f"Big Q check {stamp}", f"→ {title}", sub] + [f"• {x}" for x in reasons]
     if p.get("flip"): lines.append(p["flip"])
+    if p.get("venue"): lines.append(f"♥ {p['venue']['title']}: {p['venue']['note']}")
     if arm: lines.append(f"Armstrong 11–12: {arm['tmin']}–{arm['tmax']}°, rain {arm['pop']}%, wind ≤{arm['wind']} mph")
     lines.append(f"Sat rain {r.get('rain_in','?')}\" · river {(r.get('river') or {}).get('now','?')} ft")
     return "\n".join(lines)

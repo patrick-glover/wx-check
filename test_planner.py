@@ -17,6 +17,30 @@ def mins(t):  # "1:45p" -> minutes
     return h * 60 + int(m)
 
 
+class Venue(unittest.TestCase):
+    def v(self, **kw):
+        return P.venue(dict(dict(cabin_pop=10, cabin_wind=5, cabin_temp=45), **kw))["id"]
+
+    def test_clear_calm_is_deck(self):
+        self.assertEqual(self.v(), "DECK")
+
+    def test_iffy_is_fireplace_maybe_deck(self):
+        self.assertEqual(self.v(cabin_pop=30), "FIRE_MAYBE")
+
+    def test_rain_is_fireplace(self):
+        self.assertEqual(self.v(cabin_pop=80), "FIRE")
+
+    def test_wind_is_fireplace_even_if_dry(self):
+        self.assertEqual(self.v(cabin_wind=20), "FIRE")
+
+    def test_unknown_is_fireplace(self):
+        self.assertEqual(P.venue({})["id"], "FIRE")
+
+    def test_facts_read_cabin_row(self):
+        f = P.facts(dict(forecast=[dict(name="Cabin · Kenwood", pop=15, wind=6, tmin=44)]))
+        self.assertEqual((f["cabin_pop"], f["cabin_wind"], f["cabin_temp"]), (15, 6, 44))
+
+
 class Scenarios(unittest.TestCase):
     def test_calm_is_plan_a_full(self):
         p = run()
