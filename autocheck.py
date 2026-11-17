@@ -14,6 +14,7 @@ Usage:  python3 autocheck.py [--out DIR] [--baseline]
                so later runs only flag alerts that are NEW.
 """
 import argparse, hashlib, html, json, os, re, sys, urllib.request
+import planner
 from datetime import datetime, timezone, timedelta
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -72,7 +73,8 @@ def check_forecast():
             temps = [p["temperature"] for p in hrs]
             sky = max(set(p["shortForecast"] for p in hrs), key=[p["shortForecast"] for p in hrs].count)
             rows.append(dict(when=when, name=name, tmin=min(temps), tmax=max(temps), pop=max(pops),
-                             hours=pops, wind=max(winds), sky=sky))
+                             hours=pops, wind=max(winds), sky=sky,
+                             thunder=any("thunder" in p["shortForecast"].lower() for p in hrs)))
         except Exception as e:
             rows.append(dict(when=when, name=name, note=f"error: {e}"))
     return rows
@@ -110,6 +112,25 @@ def check_rain():
         if ov > 0 and v["value"]:
             mm += v["value"] * ov / (t1 - t0).total_seconds()
     return round(mm / 25.4, 2)
+
+
+def check_gusts():
+    """Max forecast gust (mph) Sat 9a-4p at Armstrong and Sebastopol, from NWS gridData."""
+    a, b = datetime(2026, 11, 21, 9, tzinfo=PST), datetime(2026, 11, 21, 16, tzinfo=PST)
+    best = None
+    for ll in ("38.5394,-123.0080", "38.4040,-122.8190"):
+        g = getj(point(ll)["forecastGridData"])["properties"]["windGust"]
+        k = 0.621371 if "km_h" in g.get("uom", "km_h") else 1.0  # NWS gridData reports km/h
+        for v in g["values"]:
+            start, dur = v["validTime"].split("/")
+            t0 = parse_iso(start)
+            m = re.match(r"P(?:(\d+)D)?(?:T(\d+)H)?", dur)
+            t1 = t0 + timedelta(hours=(int(m.group(1) or 0) * 24 + int(m.group(2) or 0)) or 1)
+            if t1 > a and t0 < b and v["value"] is not None:
+                best = max(best or 0, round(v["value"] * k))
+    if best is None:
+        raise ValueError("no gust data for Sat")
+    return best
 
 
 def check_river():
@@ -167,50 +188,34 @@ def check_roads():
     return out
 
 
+CHECKS = [("forecast", check_forecast), ("alerts", check_alerts), ("rain_in", check_rain), ("gusts", check_gusts),
+          ("river", check_river), ("parks", check_parks), ("roads", check_roads)]
+
 # ---------------------------------------------------------------- decision
 
 def decide(r):
-    reasons, plan = [], "A"
-    river = r.get("river") or {}
-    if river.get("peak") is not None and river["peak"] >= river.get("action", 29):
-        plan = "SKIP_GUERNEVILLE"; reasons.append(f"Russian River forecast to reach {river['peak']} ft (action stage {river['action']} ft).")
-    parks = r.get("parks") or {}
-    if parks.get("closure"):
-        if plan == "A": plan = "GROVE"
-        reasons.append("State Parks page mentions a closure: " + parks["closure"][0][:160])
-    roads = r.get("roads") or {}
-    for hw in ("116", "12", "101"):
-        txt = roads.get(hw, "")
-        if re.search(r"\bclosed\b", txt, re.I) and "Sonoma" in txt:
-            reasons.append(f"Hwy {hw} reports a closure in Sonoma Co. Check QuickMap.")
-    bad = [a for a in r.get("alerts", []) if re.search(r"Flood|High Wind|Wind Advisory|Storm", a["event"])]
-    for a in bad:
-        reasons.append(f"NWS {a['event']} touches the weekend.")
-        if "Wind" in a["event"] and plan == "A": plan = "GROVE"
-    rain = r.get("rain_in")
-    if rain is not None and rain >= 1.0 and plan == "A":
-        plan = "PAVED"; reasons.append(f"{rain}\" of rain forecast Saturday daytime. That's heavy, so pick the paved trail.")
-    arm = next((x for x in r.get("forecast", []) if x["name"] == "Armstrong Redwoods" and "wind" in x), None)
-    if arm and arm["wind"] >= 25 and plan == "A":
-        plan = "GROVE"; reasons.append(f"Winds up to {arm['wind']} mph at Armstrong, so avoid tall-tree groves in wind.")
+    """Returns (plan dict, reasons). The plan comes from planner.py; reasons add
+    the context the planner doesn't act on (alerts, road notes)."""
+    p = planner.run(r)
+    reasons = list(p["reasons"])
+    for hw in p["facts"]["closed_hwys"]:
+        reasons.append(f"Hwy {hw} reports a closure in Sonoma Co. Check QuickMap.")
+    for a in r.get("alerts") or []:
+        if re.search(r"Flood|Wind|Storm", a["event"]):
+            reasons.append(f"NWS {a['event']} touches the weekend.")
     if not reasons:
         reasons.append("No closures, no flooding, no wind. Rain jackets and go.")
-    return plan, reasons
-
-
-PLANS = {
-    "A": ("Plan A · Armstrong Redwoods", "Pioneer Trail loop 10:45–12:15, lunch in Guerneville, chocolate at 2."),
-    "GROVE": ("Backup · Grove of Old Trees, Occidental", "17599 Fitzpatrick Ln. ~1 mi of loops, lunch in Occidental, 15 min to Mirabel Rd."),
-    "PAVED": ("Backup · West County Trail, Forestville → Graton", "Paved, no mud. Lunch in Graton, 5 min to the tour."),
-    "SKIP_GUERNEVILLE": ("Backup · Skip Guerneville", "Ragle Ranch or West County Trail, then the tour and a longer Barlow stretch."),
-}
+    return p, reasons
 
 
 # ---------------------------------------------------------------- output
 
-def render_html(r, plan, reasons, stamp):
+def render_html(r, p, reasons, stamp):
     e = html.escape
-    title, sub = PLANS[plan]
+    title, sub = p["title"], p["sub"]
+    steps = "".join(f"<tr><td class=n>{e(x['t'])}</td><td><b>{e(x['name'])}</b><br><span class=m>{e(x.get('note',''))}</span></td></tr>" for x in p["steps"])
+    extra = (f"<div class=m style='margin-top:8px'>{e(p['flip'])}</div>" if p.get("flip") else "") + \
+            (f"<div class=m>Runner-up: {e(p['runner_up']['title'])}</div>" if p.get("runner_up") else "")
     rows = ""
     for x in r.get("forecast", []):
         if "note" in x:
@@ -248,7 +253,8 @@ table{{width:100%;border-collapse:collapse;font-size:.85rem}}td{{padding:7px 4px
 <div class=ey>Big Q · autocheck · {e(stamp)}</div>
 <h1>Saturday call</h1>
 <div class=call><div class=ey>Recommended</div><h2>{e(title)}</h2><div>{e(sub)}</div>
-<ul>{''.join(f'<li>{e(x)}</li>' for x in reasons)}</ul></div>
+<ul>{''.join(f'<li>{e(x)}</li>' for x in reasons)}</ul>{extra}</div>
+<h3>Itinerary</h3><table>{steps}</table>
 <div class=st>
 <div><span class=ey>Sat rain · Guerneville</span><b>{r.get('rain_in','n/a')} in</b><span class=m>6 am–10 pm</span></div>
 <div><span class=ey>Russian River</span><b>{river.get('now','n/a')} ft</b><span class=m>peak fcst {river.get('peak','n/a')} ft · flood {river.get('flood',32)}</span></div>
@@ -268,10 +274,11 @@ table{{width:100%;border-collapse:collapse;font-size:.85rem}}td{{padding:7px 4px
 </div></div></body></html>"""
 
 
-def render_txt(r, plan, reasons, stamp):
-    title, sub = PLANS[plan]
+def render_txt(r, p, reasons, stamp):
+    title, sub = p["title"], p["sub"]
     arm = next((x for x in r.get("forecast", []) if x["name"] == "Armstrong Redwoods" and "pop" in x), None)
     lines = [f"Big Q check {stamp}", f"→ {title}", sub] + [f"• {x}" for x in reasons]
+    if p.get("flip"): lines.append(p["flip"])
     if arm: lines.append(f"Armstrong 11–12: {arm['tmin']}–{arm['tmax']}°, rain {arm['pop']}%, wind ≤{arm['wind']} mph")
     lines.append(f"Sat rain {r.get('rain_in','?')}\" · river {(r.get('river') or {}).get('now','?')} ft")
     return "\n".join(lines)
@@ -291,30 +298,28 @@ def main():
         print(f"Saved {len(alerts)} State Parks alerts as baseline."); return
 
     r, errors = {}, {}
-    for key, fn in [("forecast", check_forecast), ("alerts", check_alerts), ("rain_in", check_rain),
-                    ("river", check_river), ("parks", check_parks), ("roads", check_roads)]:
+    for key, fn in CHECKS:
         try:
             r[key] = fn()
         except Exception as e:
             errors[key] = str(e)
     r["errors"] = errors
-    plan, reasons = decide(r)
+    p, reasons = decide(r)
     if errors:
         reasons.append("Some checks failed (" + ", ".join(errors) + "). Use the links.")
     stamp = datetime.now(PST).strftime("%a %b %-d, %-I:%M %p")
     os.makedirs(a.out, exist_ok=True)
-    open(os.path.join(a.out, "status.html"), "w").write(render_html(r, plan, reasons, stamp))
-    txt = render_txt(r, plan, reasons, stamp)
+    open(os.path.join(a.out, "status.html"), "w").write(render_html(r, p, reasons, stamp))
+    txt = render_txt(r, p, reasons, stamp)
     open(os.path.join(a.out, "status.txt"), "w").write(txt)
-    json.dump(dict(r, plan=plan, reasons=reasons, stamp=stamp), open(os.path.join(a.out, "status.json"), "w"), indent=1, default=str)
+    json.dump(dict(r, plan=p["id"], detail=p, reasons=reasons, stamp=stamp), open(os.path.join(a.out, "status.json"), "w"), indent=1, default=str)
     print(txt)
     if a.ntfy:
-        notify(a.ntfy, plan, txt, a.page_url)
+        notify(a.ntfy, p["id"], txt, a.page_url, p["title"])
 
 
-def notify(topic, plan, body, url=None):
-    short = {"A": "Plan A - Armstrong", "GROVE": "Backup - Grove of Old Trees", "PAVED": "Backup - paved trail",
-             "SKIP_GUERNEVILLE": "Backup - skip Guerneville"}[plan]
+def notify(topic, plan, body, url=None, title=None):
+    short = (title or plan).replace("·", "-")
     headers = {"Title": "Saturday call: " + short, "Tags": "evergreen_tree" if plan == "A" else "warning",
                "Priority": "default" if plan == "A" else "high"}
     if url:

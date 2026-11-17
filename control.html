@@ -108,6 +108,8 @@ svg text{font:9px var(--mono);fill:var(--m)}
     <div class="plan" id="plan">Loading…</div>
     <div id="plan-sub" class="m"></div>
     <ul class="tight" id="reasons"></ul>
+    <div id="flip" class="m" style="margin-top:6px;font-size:12px"></div>
+    <table id="itin" style="margin-top:6px;font-size:12px"></table>
   </div>
 
   <!-- route chart -->
@@ -223,8 +225,10 @@ const SCHED=[
  {d:"2026-11-21",s:"22:30",e:"23:59",n:"Hot tub",p:"Creekside",ll:KEN,fb:"Rain is a feature now"}
 ];
 const CONT=[
- ["Armstrong closed, trees down, or wind ≥ 25 mph","Grove of Old Trees, 17599 Fitzpatrick Ln, Occidental. ~1 mi of loops, lunch in Occidental, 15 min to Mirabel Rd."],
- ["River forecast ≥ 29 ft or River Rd / Armstrong Woods Rd closed","Skip Guerneville. Ragle Ranch (Sebastopol) or the West County Trail, lunch in Graton/Sebastopol, then the tour."],
+ ["Armstrong closed (not wind)","Grove of Old Trees, 17599 Fitzpatrick Ln, Occidental. ~1 mi of loops, lunch in Occidental, 15 min to Mirabel Rd. Small preserve: confirm it's open."],
+ ["Gusts ≥ 30 mph, sustained ≥ 25, or an NWS wind alert","No tall trees, so no Armstrong and no Grove. West County Trail (paved, open sky), or the Schulz Museum in Santa Rosa if it's also pouring."],
+ ["Thunderstorms in the forecast","Indoors: Schulz Museum (Santa Rosa, right off 101, weekend 10–5), then the tour and a long Barlow stretch."],
+ ["River forecast ≥ 29 ft or River Rd / Armstrong Woods Rd closed","Skip Guerneville. Ragle Ranch if rain < 0.5\", else the West County Trail. Lunch in Graton/Sebastopol. Reach Mirabel Rd from Hwy 116, not River Rd."],
  ["Heavy rain (≥ 1\" Sat daytime) or mud","West County Regional Trail from Forestville to Graton. Paved, lunch in Graton, 5 min to the tour."],
  ["Left Sac after ~9:15","Shorten the redwoods. After ~10:15: redwoods 45 min + quick lunch. After ~11:00: skip the redwoods. See the calculator."],
  ["Can't make 2:00 at the chocolate tour","Call them from the car: ask to join late or take a later slot. Otherwise go to The Barlow and the plan still works."],
@@ -250,7 +254,7 @@ const CHECKS={
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const PLANS={A:"Plan A · Armstrong Redwoods",GROVE:"Backup · Grove of Old Trees",PAVED:"Backup · West County Trail (paved)",SKIP_GUERNEVILLE:"Backup · Skip Guerneville"};
+const PLANS={A:"Plan A · Armstrong Redwoods",GROVE:"Backup · Grove of Old Trees",PAVED:"Backup · West County Trail (paved)",RAGLE:"Backup · Ragle Ranch",INDOOR:"Backup · Indoors",NO_WALK:"Short day · skip the walk",LATE:"Can't make the 2:00 tour"};
 
 // ---- time in PT
 function pt(d){d=d||new Date();const f=new Intl.DateTimeFormat("en-CA",{timeZone:"America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(d);const g=t=>f.find(x=>x.type===t).value;return{date:g("year")+"-"+g("month")+"-"+g("day"),h:+g("hour")%24,m:+g("minute"),s:+g("second")};}
@@ -358,17 +362,19 @@ async function loadRiver(fresh){
 let server=null;
 async function loadServer(){
   try{server=await fetch("status.json?_="+Date.now()).then(r=>{if(!r.ok)throw 0;return r.json()});
-    const plan=server.plan,cls=plan==="A"?"ok":"warn";
-    $("plan").textContent=PLANS[plan]||plan;$("plan").className="plan "+cls;
+    const plan=server.plan,cls=plan==="A"?"ok":"warn",dt=server.detail||{},title=dt.title||PLANS[plan]||plan;
+    $("plan").textContent=title;$("plan").className="plan "+cls;$("plan-sub").textContent=dt.sub||"";
+    $("flip").innerHTML=(dt.flip?esc(dt.flip):"")+(dt.runner_up?"<br>Runner-up: "+esc(dt.runner_up.title):"");
+    $("itin").innerHTML=(dt.steps||[]).map(x=>"<tr><td class='n'>"+esc(x.t)+"</td><td><b>"+esc(x.name)+"</b> <span class='m'>"+esc(x.note||"")+"</span></td></tr>").join("");
     $("reasons").innerHTML=(server.reasons||[]).map(r=>"<li>"+esc(r)+"</li>").join("");
     $("srv-age").textContent="checked "+ago(server.iso);
-    $("topplan").innerHTML="<span class='dot "+cls+"'></span>"+esc((PLANS[plan]||plan).replace("Backup · ","B: ").replace("Plan A · ","A: "));
+    $("topplan").innerHTML="<span class='dot "+cls+"'></span>"+esc(title.replace("Backup · ","B: ").replace("Plan A · ","A: "));
     $("topplan-s").textContent="server "+ago(server.iso);
     $("qpf").textContent=(server.rain_in!=null?server.rain_in:"—")+"\"";
     const rd=server.roads||{};$("roads").innerHTML=Object.keys(rd).map(k=>{const t=rd[k],bad=/closed/i.test(t),meh=/1-way|controlled|chain|advisory/i.test(t);return"<div class='rd'><b class='"+(bad?"crit":meh?"warn":"ok")+"'>"+k+"</b> "+esc(t.replace(/\[IN THE ([^\]]+)\]/g,"[$1]").slice(0,320))+"</div>"}).join("")||"<span class='m'>—</span>";
     const pk=server.parks||{};const nw=new Set(pk.new||[]);
     $("parks").innerHTML=(pk.all||[]).filter(a=>!/^No Drones|^Parking for Armstrong/.test(a)).map(a=>"<div class='al "+(nw.has(a)?"crit":"ok")+"'>"+(nw.has(a)?"<b>NEW</b> ":"")+esc(a.slice(0,260))+"</div>").join("")+((pk.closure||[]).length?"":"<div class='m' style='font-size:11px'>No closure language detected. Parking $10/vehicle.</div>");
-    renderFeed();feedOK++;
+    renderFeed();calc();feedOK++;
   }catch(e){$("plan").textContent="Server status unavailable";$("srv-age").textContent="";feedBad++;}
 }
 
@@ -380,7 +386,10 @@ function renderFeed(){
 // ---- calculator
 function calc(){
   const dep=toMin($("dep").value||"08:30"),arr=dep+135,leave=13*60+40,avail=leave-arr;let o;
-  if(arr>=14*60-10)o="<b class='crit'>Can't make 2:00 via Guerneville.</b> Sac → Forestville is ~2h05 ("+fmt(dep+125)+"). "+(dep+125>14*60?"Call the chocolate place to push. Otherwise go straight to The Barlow.":"Drive straight to Mirabel Rd and eat after the tour.");
+  const tbl=server&&server.detail&&server.detail.by_departure;
+  if(tbl&&tbl.length){const row=tbl.filter(x=>toMin(x.dep)<=dep).pop()||tbl[0];
+    o="<b class='"+(row.id==="A"?"ok":row.id==="LATE"?"crit":"warn")+"'>"+esc(row.title)+"</b> <span class='m'>(planner, leaving "+fmt(toMin(row.dep))+", current conditions)</span><br>"+esc(row.sub);}
+  else if(arr>=14*60-10)o="<b class='crit'>Can't make 2:00 via Guerneville.</b> Sac → Forestville is ~2h05 ("+fmt(dep+125)+"). "+(dep+125>14*60?"Call the chocolate place to push. Otherwise go straight to The Barlow.":"Drive straight to Mirabel Rd and eat after the tour.");
   else if(avail>=150)o="<b class='ok'>Full plan.</b> Arrive "+fmt(arr)+". Redwoods "+fmt(arr)+"–"+fmt(arr+90)+", lunch until 1:40.";
   else if(avail>=105)o="<b class='ok'>Slightly short.</b> Arrive "+fmt(arr)+". Redwoods "+(avail-60)+" min, sit-down lunch 60 min, leave 1:40.";
   else if(avail>=70)o="<b class='warn'>Tight.</b> Arrive "+fmt(arr)+". Redwoods 45 min, then grab-and-go lunch, leave 1:40.";

@@ -24,14 +24,14 @@ def previous():
 def main():
     prev = previous()
     r, errors = {}, {}
-    for key, fn in [("forecast", ac.check_forecast), ("alerts", ac.check_alerts), ("rain_in", ac.check_rain),
-                    ("river", ac.check_river), ("parks", ac.check_parks), ("roads", ac.check_roads)]:
+    for key, fn in ac.CHECKS:
         try:
             r[key] = fn()
         except Exception as e:
             errors[key] = str(e)[:200]
     r["errors"] = errors
-    plan, reasons = ac.decide(r)
+    detail, reasons = ac.decide(r)
+    plan = detail["id"]
     if errors:
         reasons.append("Some checks failed (" + ", ".join(errors) + "). Use the links.")
     now = datetime.now(ac.PST)
@@ -45,7 +45,9 @@ def main():
         add("info", f"Monitoring started. Plan {plan}.")
     else:
         if prev.get("plan") != plan:
-            add("crit", f"PLAN CHANGE {prev.get('plan')} → {plan}: {reasons[0]}")
+            add("crit", f"PLAN CHANGE {prev.get('plan')} → {plan} ({detail['title']}): {reasons[0]}")
+        elif (prev.get("detail") or {}).get("sub") not in (None, detail["sub"]):
+            add("info", f"Itinerary adjusted: {detail['sub']}")
         pa = {a["event"] + "|" + a["headline"] for a in prev.get("alerts", [])}
         na = {a["event"] + "|" + a["headline"] for a in r.get("alerts", [])}
         for a in sorted(na - pa): add("warn", "NEW NWS alert: " + a.split("|")[0] + ". " + a.split("|")[1][:140])
@@ -57,6 +59,8 @@ def main():
             old = (prev.get("roads") or {}).get(hw)
             if old is not None and old != txt and "check failed" not in txt:
                 add("warn" if "closed" in txt.lower() else "info", f"Caltrans Hwy {hw} update: {txt[:180]}")
+        if r.get("gusts") is not None and prev.get("gusts") is not None and abs(r["gusts"] - prev["gusts"]) >= 5:
+            add("warn" if r["gusts"] >= 25 else "info", f"Sat gust forecast {prev['gusts']} → {r['gusts']} mph")
         if r.get("rain_in") is not None and prev.get("rain_in") is not None and abs(r["rain_in"] - prev["rain_in"]) >= 0.1:
             add("info", f"Sat rain forecast {prev['rain_in']}\" → {r['rain_in']}\"")
         rv, prv = r.get("river") or {}, prev.get("river") or {}
@@ -67,16 +71,16 @@ def main():
     log += new
 
     os.makedirs(OUT, exist_ok=True)
-    out = dict(r, plan=plan, reasons=reasons, stamp=stamp, iso=now.isoformat(), log=log)
+    out = dict(r, plan=plan, detail=detail, reasons=reasons, stamp=stamp, iso=now.isoformat(), log=log)
     json.dump(out, open(os.path.join(OUT, "status.json"), "w"), default=str)
-    open(os.path.join(OUT, "status.html"), "w").write(ac.render_html(r, plan, reasons, stamp))
-    txt = ac.render_txt(r, plan, reasons, stamp)
+    open(os.path.join(OUT, "status.html"), "w").write(ac.render_html(r, detail, reasons, stamp))
+    txt = ac.render_txt(r, detail, reasons, stamp)
     print(txt); [print(" ", e["level"], e["msg"]) for e in new]
 
     important = [e for e in new if e["level"] in ("warn", "crit") and not e["msg"].startswith("Check failed")]
     if EVENT == "workflow_dispatch" or CRON in KEY_CRONS or important or not prev:
         body = txt + ("\n\nChanges:\n" + "\n".join("• " + e["msg"] for e in important) if important else "")
-        json.dump(dict(plan=plan, body=body), open("notify.json", "w"))  # sent after the page deploys
+        json.dump(dict(plan=plan, title=detail["title"], body=body), open("notify.json", "w"))  # sent after the page deploys
 
 
 if __name__ == "__main__":
