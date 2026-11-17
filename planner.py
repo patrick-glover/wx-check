@@ -51,11 +51,22 @@ PLACES = {
                    ll=(38.4596, -122.7366), outdoor=False, trees="none", surface="indoor", near_river=False,
                    hours=("10:00", "17:00"), pref=30, dur=(90, 60),
                    note="Right off 101. Weekend hours 10–5, verify Fri"),
-    "GUE":    dict(kind="lunch", name="Guerneville", ll=(38.5019, -122.9961), near_river=True, hours=("11:00", "20:00"), pref=10),
-    "OCC":    dict(kind="lunch", name="Occidental", ll=(38.4071, -122.9488), near_river=False, hours=("11:00", "20:00"), pref=8),
-    "GRATON": dict(kind="lunch", name="Graton", ll=(38.4366, -122.8689), near_river=False, hours=("11:00", "20:00"), pref=8),
-    "FORL":   dict(kind="lunch", name="Forestville", ll=(38.4738, -122.8903), near_river=False, hours=("11:00", "20:00"), pref=7),
-    "SEB":    dict(kind="lunch", name="Sebastopol", ll=(38.4021, -122.8239), near_river=False, hours=("11:00", "20:00"), pref=7),
+    # Lunch: real places. town = the walk they pair with. styles: 60 sit-down, 30 grab-and-go.
+    # Hours are best-known from listings (Nov 2026) and conflict online; phone is in the note.
+    "BOON":   dict(kind="lunch", town="GUE", name="boon eat+drink", place="Guerneville", ll=(38.5019, -122.9961), near_river=True,
+                   hours=("11:30", "15:00"), styles=(60,), pref=10, phone="707-869-0780", note="16248 Main St · confirm they do Sat lunch"),
+    "PIKNIK": dict(kind="lunch", town="GUE", name="Piknik Town Market", place="Guerneville", ll=(38.5019, -122.9961), near_river=True,
+                   hours=("08:00", "15:00"), styles=(30,), pref=9, phone="707-604-7295", note="16228 Main St (was Big Bottom Market)"),
+    "UNION":  dict(kind="lunch", town="OCC", name="Union Hotel", place="Occidental", ll=(38.4071, -122.9488), near_river=False,
+                   hours=("11:30", "20:00"), styles=(60,), pref=8, phone="707-874-3555", note="3731 Main St · confirm Sat lunch"),
+    "WILLOW": dict(kind="lunch", town="GRATON", name="Willow Wood Market Cafe", place="Graton", ll=(38.4366, -122.8689), near_river=False,
+                   hours=("08:00", "21:00"), styles=(60, 30), pref=9, phone="707-823-0233", note="9020 Graton Rd · cozy, good in rain"),
+    "FORL":   dict(kind="lunch", town="FORL", name="Front St cafés", place="Forestville", ll=(38.4738, -122.8903), near_river=False,
+                   hours=("08:00", "18:00"), styles=(30,), pref=5, phone=None, note="Tiny Town Cafe / Roasters · 3 min to the tour"),
+    "RAMEN":  dict(kind="lunch", town="SEB", name="Ramen Gaijin", place="Sebastopol", ll=(38.4021, -122.8239), near_river=False,
+                   hours=("12:00", "14:30"), styles=(60,), pref=7, phone="707-827-3609", note="6948 Sebastopol Ave · ramen in the rain"),
+    "COFFEE": dict(kind="coffee", name="Roasters Espresso Bar", ll=(38.4738, -122.8903), hours=("06:00", "18:00"),
+                   note="6656 Front St, Forestville · or Tiny Town Cafe, 6544 Front St · 3 min to Mirabel Rd"),
     "TOUR":   dict(kind="fixed", name="Chocolate tour", ll=(38.4935, -122.8850), note="6492 Mirabel Rd. Approach from Hwy 116, not River Rd"),
     "BARLOW": dict(kind="fixed", name="The Barlow", ll=(38.4040, -122.8190), note="Sebastopol · indoors · flex"),
     "KEN":    dict(kind="fixed", name="Cabin · Kenwood", ll=(38.4130, -122.5460)),
@@ -63,12 +74,13 @@ PLACES = {
 NO_WALK = dict(kind="walk", id="NO_WALK", name="No walk", title="Short day · skip the walk", pref=0, dur=(0, 0))
 
 WALK_KEYS = {"id", "name", "title", "ll", "outdoor", "trees", "surface", "near_river", "hours", "pref", "dur", "note"}
-LUNCH_KEYS = {"name", "ll", "near_river", "hours", "pref"}
+LUNCH_KEYS = {"name", "town", "place", "ll", "near_river", "hours", "styles", "pref", "phone", "note"}
+COFFEE_KEYS = {"name", "ll", "hours", "note"}
 
 
 def validate(places=PLACES):
     for k, p in places.items():
-        need = WALK_KEYS if p["kind"] == "walk" else LUNCH_KEYS if p["kind"] == "lunch" else {"name", "ll"}
+        need = dict(walk=WALK_KEYS, lunch=LUNCH_KEYS, coffee=COFFEE_KEYS).get(p["kind"], {"name", "ll"})
         missing = need - p.keys()
         if missing:
             raise ValueError(f"place {k} missing {sorted(missing)}")
@@ -76,7 +88,9 @@ def validate(places=PLACES):
             if p["trees"] not in ("tall", "low", "none"): raise ValueError(f"{k}: trees={p['trees']!r}")
             if p["surface"] not in ("paved", "packed", "dirt", "indoor"): raise ValueError(f"{k}: surface={p['surface']!r}")
             if p["outdoor"] != (p["surface"] != "indoor"): raise ValueError(f"{k}: outdoor/surface disagree")
-            if p.get("pair") and p["pair"] not in places: raise ValueError(f"{k}: pair {p['pair']} unknown")
+            towns = {q["town"] for q in places.values() if q["kind"] == "lunch"}
+            if p.get("pair") and p["pair"] not in towns: raise ValueError(f"{k}: pair {p['pair']} has no lunch spot")
+        if p["kind"] == "lunch" and not set(p["styles"]) <= {30, 60}: raise ValueError(f"{k}: styles={p['styles']!r}")
 
 
 validate()
@@ -97,6 +111,7 @@ def fmt(m):
 # (Sac→Armstrong ~2h15, Sac→Forestville ~2h05). Override legs where that's off.
 HUB = (38.4700, -122.7300)
 SAC_TO_HUB = 100
+RIVER_SIDE = {"ARM", "BOON", "PIKNIK"}  # west of the 116 river stretch
 OVERRIDES = {frozenset(("BARLOW", "KEN")): 45, frozenset(("TOUR", "KEN")): 45}
 
 
@@ -121,6 +136,8 @@ def drive(a, b, f=None):
         t += 15  # Bennett Valley Rd → Glen Ellen detour
     if "101" in f.get("closed_hwys", ()) and a == "SAC":
         t += 30
+    if "116" in f.get("closed_hwys", ()) and a != "SAC" and ((a in RIVER_SIDE) != (b in RIVER_SIDE)):
+        t += 10  # Guerneville <-> Forestville around on River Rd
     return round(t)
 
 # ---------------------------------------------------------------- rules
@@ -196,7 +213,7 @@ def plan(f, dep="08:30"):
                 if end > hm(w["hours"][1]): continue
             else:
                 arr = start = end = dep_m
-            options = [(lk, lp, style) for lk, lp in lunches for style in (60, 30)] + [("AFTER", None, 45)]
+            options = [(lk, lp, style) for lk, lp in lunches for style in lp["styles"]] + [("AFTER", None, 45)]
             for lk, lp, style in options:
                 if lp is not None:
                     if check(lp, f): continue
@@ -212,7 +229,7 @@ def plan(f, dep="08:30"):
                 slack = TOUR_ARRIVE_BY - tour_arr
                 score = w["pref"] - (w["dur"][0] - dur) * 0.4
                 score += (lp["pref"] + (6 if style == 60 else 0)) if lp else -4
-                score += 5 if w.get("pair") == lk else 0
+                score += 5 if lp and w.get("pair") == lp["town"] else 0
                 score += min(slack, 30) * 0.1 - max(0, 10 - slack)
                 score -= (tour_arr - dep_m - c_dur(dur, l_start, l_end)) * 0.15  # minutes in the car
                 cands.append(dict(score=score, w=w, wk=wk, dur=dur, arr=arr, start=start, end=end,
@@ -236,8 +253,16 @@ def c_dur(dur, l_start, l_end):
 def sub_of(c):
     w = c["w"]
     s = f"{w['name']} {fmt(c['start'])}–{fmt(c['end'])}" + (f" ({c['dur']} min)" if c["dur"] != w["dur"][0] else "") + ", " if c["dur"] else ""
-    s += (f"lunch in {c['lp']['name']} ({'sit-down' if c['style'] == 60 else 'grab-and-go'}), " if c["lp"] else "lunch after the tour, ")
-    return s + "tour at 2:00."
+    s += (f"lunch at {c['lp']['name']}, {c['lp']['place']} ({'sit-down' if c['style'] == 60 else 'grab-and-go'}), " if c["lp"] else "lunch after the tour, ")
+    return s + ("coffee on Front St, " if coffee_fits(c) else "") + "tour at 2:00."
+
+
+COFFEE_MIN = 15
+
+
+def coffee_fits(c):
+    """Coffee on Front St before the tour, only with real slack. It's 3 min from Mirabel Rd."""
+    return c["slack"] >= COFFEE_MIN + 5
 
 
 def evening(f, after_lunch):
@@ -253,12 +278,17 @@ def describe(c, f, dep_m):
     if c["dur"]:
         steps.append(dict(t=fmt(c["start"]), end=fmt(c["end"]), name=w["name"], note=w["note"]))
     if c["lp"]:
-        steps.append(dict(t=fmt(c["l_start"]), end=fmt(c["l_end"]), name="Lunch · " + c["lp"]["name"],
-                          note="sit-down" if c["style"] == 60 else "grab-and-go"))
+        lp = c["lp"]
+        steps.append(dict(t=fmt(c["l_start"]), end=fmt(c["l_end"]), name=f"Lunch · {lp['name']}, {lp['place']}",
+                          note=("sit-down" if c["style"] == 60 else "grab-and-go") + f" · {lp['note']}" + (f" · {lp['phone']}" if lp["phone"] else "")))
+    if coffee_fits(c):
+        cf = PLACES["COFFEE"]
+        steps.append(dict(t=fmt(TOUR_ARRIVE_BY - COFFEE_MIN - 3), end=fmt(TOUR_ARRIVE_BY - 3), name="Coffee · " + cf["name"], note=cf["note"]))
     steps.append(dict(t=fmt(TOUR_AT), end=fmt(TOUR_AT + TOUR_LEN), name="Chocolate tour",
                       note=f"arrive {fmt(c['tour_arr'])} · {PLACES['TOUR']['note']}"))
     b0, b1, cabin = evening(f, not c["lp"])
-    steps.append(dict(t=fmt(b0), end=fmt(b1), name="The Barlow" + (" + late lunch" if not c["lp"] else ""), note="flex block, cut this first"))
+    steps.append(dict(t=fmt(b0), end=fmt(b1), name="The Barlow" + (" + late lunch" if not c["lp"] else ""),
+                      note="flex block, cut this first" + ("" if coffee_fits(c) else " · coffee at Taylor Maid here")))
     steps.append(dict(t=fmt(cabin), name="Cabin · Kenwood", note=("Hwy 12 closed: Bennett Valley Rd → Glen Ellen" if "12" in f.get("closed_hwys", ()) else "Hwy 12 via Santa Rosa")))
     return dict(id=w["id"], title=w["title"], sub=sub_of(c), steps=steps, slack=c["slack"], cabin=fmt(cabin))
 
@@ -322,12 +352,20 @@ def venue(f):
 
 # ---------------------------------------------------------------- facts from checks
 
+def sonoma_closure(txt):
+    """True if one Caltrans item both says closed and is in Sonoma Co. Items end in '- Due to ...',
+    so a closure elsewhere on the route can't pair with an unrelated Sonoma line."""
+    import re
+    return any(re.search(r"\bclosed\b", item, re.I) and "Sonoma Co" in item for item in re.split(r"- Due to", txt or ""))
+
+
 def facts(r):
     f = {}
     rv = r.get("river") or {}
     vals = [x for x in (rv.get("peak"), rv.get("now")) if x is not None]
     f["river_peak"] = round(max(vals), 1) if vals else None
     f["river_action"] = rv.get("action") or 29
+    f["river_flood"] = rv.get("flood") or 32
     f["rain_in"] = r.get("rain_in")
     f["gust_mph"] = r.get("gusts")
     rows = [x for x in (r.get("forecast") or []) if "wind" in x]
@@ -346,9 +384,7 @@ def facts(r):
         f["wind_alert"] = any("Wind" in a["event"] for a in alerts)
     parks = r.get("parks")
     f["armstrong_open"] = None if parks is None else not parks.get("closure")
-    import re
-    f["closed_hwys"] = sorted(hw for hw, txt in (r.get("roads") or {}).items()
-                              if re.search(r"\bclosed\b", txt, re.I) and "Sonoma" in txt)
+    f["closed_hwys"] = sorted(hw for hw, txt in (r.get("roads") or {}).items() if sonoma_closure(txt))
     return f
 
 

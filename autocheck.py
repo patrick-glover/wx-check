@@ -198,8 +198,14 @@ def decide(r):
     the context the planner doesn't act on (alerts, road notes)."""
     p = planner.run(r)
     reasons = list(p["reasons"])
-    for hw in p["facts"]["closed_hwys"]:
-        reasons.append(f"Hwy {hw} reports a closure in Sonoma Co. Check QuickMap.")
+    f = p["facts"]
+    for hw in f["closed_hwys"]:
+        reasons.append(f"Hwy {hw} reports a closure in Sonoma Co. Check QuickMap."
+                       + (" Guerneville ↔ Forestville goes around on River Rd (+10 min)." if hw == "116" else ""))
+    if f.get("river_peak") is not None and f["river_peak"] >= f["river_flood"]:
+        reasons.append(f"River at flood stage ({f['river_peak']} ft): River Rd near Mirabel can go under. "
+                       "Reach the tour from Forestville / 116 and call Rainy Day Chocolate before you drive over."
+                       + (" 116 is ALSO closed: call them now about a late or later slot." if "116" in f["closed_hwys"] else ""))
     for a in r.get("alerts") or []:
         if re.search(r"Flood|Wind|Storm", a["event"]):
             reasons.append(f"NWS {a['event']} touches the weekend.")

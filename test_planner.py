@@ -41,6 +41,56 @@ class Venue(unittest.TestCase):
         self.assertEqual((f["cabin_pop"], f["cabin_wind"], f["cabin_temp"]), (15, 6, 44))
 
 
+class Roads(unittest.TestCase):
+    ONE_WAY = ("[IN THE CENTRAL CALIFORNIA AREA] 1-way controlled traffic at Cnopius Rd /in Edendale/ (Sonoma Co) "
+               "24 hrs a day thru 2100 hrs on 11/30/26 - Due to construction")
+
+    def test_one_way_control_is_not_a_closure(self):
+        self.assertFalse(P.sonoma_closure(self.ONE_WAY))
+
+    def test_sonoma_closure_detected(self):
+        self.assertTrue(P.sonoma_closure("SR 116 is closed from Guerneville to Forestville (Sonoma Co) - Due to flooding"))
+
+    def test_closure_elsewhere_doesnt_pair_with_sonoma_item(self):
+        txt = ("I-80 is closed at Donner Summit (Placer Co) - Due to snow "
+               "1-way controlled traffic near Cloverdale (Sonoma Co) - Due to slide repair")
+        self.assertFalse(P.sonoma_closure(txt))
+
+    def test_116_closed_slows_guerneville_to_tour(self):
+        self.assertEqual(P.drive("BOON", "TOUR", dict(closed_hwys=["116"])), P.drive("BOON", "TOUR") + 10)
+        self.assertEqual(P.drive("WILLOW", "TOUR", dict(closed_hwys=["116"])), P.drive("WILLOW", "TOUR"))
+
+
+class Food(unittest.TestCase):
+    def test_calm_lunch_is_a_named_guerneville_spot(self):
+        p = run()
+        lunch = next(s for s in p["steps"] if s["name"].startswith("Lunch"))
+        self.assertIn("Guerneville", lunch["name"])
+        self.assertTrue(any(n in lunch["name"] for n in ("boon", "Piknik")))
+
+    def test_lunch_respects_closing_time(self):
+        for k, lp in P.PLACES.items():
+            if lp["kind"] != "lunch": continue
+            for dep in ("07:30", "08:30", "10:00"):
+                for s in run(dep)["steps"]:
+                    if s["name"].startswith("Lunch") and lp["name"] in s["name"]:
+                        self.assertLessEqual(mins(s["end"]), P.hm(lp["hours"][1]))
+
+    def test_coffee_only_with_slack(self):
+        for dep in ("07:30", "08:30", "09:15"):
+            p = run(dep)
+            cof = [s for s in p["steps"] if s["name"].startswith("Coffee")]
+            if p["slack"] is not None and p["slack"] < P.COFFEE_MIN + 5:
+                self.assertEqual(cof, [])
+            for s in cof:
+                self.assertLessEqual(mins(s["end"]), P.TOUR_ARRIVE_BY)
+
+    def test_early_start_gets_coffee(self):
+        # leaving at 7:30 on a gusty day: short paved walk, lots of slack
+        p = run("07:30", gust_mph=40)
+        self.assertTrue(any(s["name"].startswith("Coffee") for s in p["steps"]), p["steps"])
+
+
 class Scenarios(unittest.TestCase):
     def test_calm_is_plan_a_full(self):
         p = run()
@@ -135,7 +185,7 @@ class Model(unittest.TestCase):
     def test_drive_calibration(self):
         self.assertTrue(125 <= P.drive("SAC", "ARM") <= 145, P.drive("SAC", "ARM"))
         self.assertTrue(115 <= P.drive("SAC", "TOUR") <= 130, P.drive("SAC", "TOUR"))
-        self.assertTrue(12 <= P.drive("GUE", "TOUR") <= 25, P.drive("GUE", "TOUR"))
+        self.assertTrue(12 <= P.drive("BOON", "TOUR") <= 25, P.drive("BOON", "TOUR"))
 
     def test_facts_from_checks(self):
         r = dict(river=dict(now=10.2, peak=14.0, action=29), rain_in=0.3, gusts=22,
