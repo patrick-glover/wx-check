@@ -36,6 +36,7 @@ jobs:
           echo '<!doctype html><title>.</title>' > site/index.html
           python3 run.py $D
           cp control.html $D/index.html
+          cp -R floorplan site/eb534028577e42caaab0
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
       - id: deploy

@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Creek Haven Floor Plan</title>
+<style>
+:root{
+  --bg:#f6f3ee; --paper:#fffdf9; --ink:#2b2622; --muted:#7a7068; --line:#3a332d;
+  --room:#fbf7f0; --room-hi:#f3e2c4; --sel:#e0a43a; --deck:#d9b99a; --brick:#d79a83;
+  --water:#bcd7e3; --grass:#dfe8d2; --gravel:#e6e1d8; --tub:#9fd3e6; --dash:#a0958a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:20px 24px 8px}
+h1{margin:0;font-size:22px;letter-spacing:.2px}
+.sub{color:var(--muted);margin-top:4px;font-size:13.5px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;padding:8px 24px 24px}
+@media (max-width:980px){main{grid-template-columns:1fr;padding:8px 16px 16px}header{padding:16px 16px 6px}}
+.card{background:var(--paper);border:1px solid #e4ddd2;border-radius:12px;padding:12px}
+svg{width:100%;height:auto;display:block}
+.room{fill:var(--room);stroke:var(--line);stroke-width:.35;cursor:pointer;transition:fill .15s}
+.room.low{stroke-dasharray:1 .6;stroke:var(--dash)}
+.room:hover{fill:var(--room-hi)}
+.room.sel{fill:#f6d9a3}
+.zone{cursor:pointer;stroke-width:.25}
+.zone:hover{filter:brightness(.95)}
+.zone.sel{stroke:var(--sel)!important;stroke-width:.6}
+.lbl{font-size:1.55px;font-weight:600;fill:var(--ink);pointer-events:none;text-anchor:middle}
+.lbl2{font-size:1.1px;fill:var(--muted);pointer-events:none;text-anchor:middle}
+.tiny{font-size:1px;fill:var(--muted);pointer-events:none}
+.win{stroke:#5a9ec0;stroke-width:.7}
+.slider{stroke:#2f7fae;stroke-width:1}
+.door{stroke:#b5562f;stroke-width:1}
+.furn{fill:none;stroke:#b8aa98;stroke-width:.2}
+.star{fill:var(--sel);stroke:#8a5a10;stroke-width:.15}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:18px;height:4px;vertical-align:middle;margin-right:5px;border-radius:2px}
+#panel h2{margin:2px 0 2px;font-size:18px}
+#panel .conf{font-size:12px;color:var(--muted);margin-bottom:6px}
+#panel p{margin:6px 0}
+.thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.thumbs img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:6px;cursor:zoom-in;border:1px solid #e4ddd2}
+.notes{margin-top:16px}
+.notes h3{font-size:15px;margin:0 0 6px}
+.notes li{margin:4px 0}
+#lb{position:fixed;inset:0;background:rgba(20,16,12,.88);display:none;align-items:center;justify-content:center;z-index:9;cursor:zoom-out}
+#lb img{max-width:94vw;max-height:88vh;border-radius:8px}
+#lb span{position:absolute;bottom:14px;color:#eee;font-size:13px}
+.compass{font-size:1.4px;fill:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Sonoma Creek Haven: approximate floor plan</h1>
+  <div class="sub">Rebuilt by hand from 75 listing photos plus the listing text (~1,900 sq ft, 2 bd / 2.5 ba). Dimensions are estimates, roughly ±3 ft. Dashed outlines mean low confidence. Click a room to see its photos.</div>
+</header>
+<main>
+<section class="card">
+<svg id="plan" viewBox="-34 -33 142 93" role="img" aria-label="Approximate floor plan and site map">
+  <!-- site -->
+  <rect x="-34" y="-33" width="142" height="93" fill="var(--grass)"/>
+  <rect x="-34" y="-31" width="142" height="5" fill="#cfcac2"/>
+  <text x="-32" y="-27.8" class="tiny">ROAD (street side)</text>
+  <path d="M-34,-24 H74" stroke="#a5876a" stroke-width=".5" stroke-dasharray="1.2 .5"/>
+  <text x="40" y="-24.6" class="tiny">wood fence</text>
+  <rect class="zone" data-k="drive" x="-30" y="-22" width="88" height="14" fill="var(--gravel)" stroke="#cfc6b8"/>
+  <text x="14" y="-14" class="lbl2">gravel driveway / parking</text>
+
+  <!-- creek -->
+  <path class="zone" data-k="creek" d="M-34,44 C-10,40 10,47 34,43 S80,46 108,42 V60 H-34Z" fill="var(--water)" stroke="#8fb9cc"/>
+  <path d="M-34,40 C-10,37 10,43 34,40 S80,42 108,38 V44 C80,46 60,43 34,43 S-10,40 -34,44Z" fill="#d8d1c3"/>
+  <text x="30" y="52" class="lbl" style="fill:#3d6f85">Sonoma Creek</text>
+  <text x="30" y="41.6" class="tiny" style="text-anchor:middle">rocky creek bank</text>
+
+  <!-- carport -->
+  <rect class="zone" data-k="front" x="-22" y="-4" width="15" height="16" fill="#e8e3da" stroke="#9c9285" stroke-dasharray=".8 .4"/>
+  <text x="-14.5" y="4.5" class="lbl2">carport</text>
+
+  <!-- front porch -->
+  <rect class="zone" data-k="front" x="44" y="-6" width="26" height="6" fill="#e9dfcf" stroke="#9c9285"/>
+  <text x="57" y="-2.4" class="lbl2">covered front porch</text>
+  <path d="M70,-3 C76,-3 80,-6 86,-6" stroke="#cbbfa9" stroke-width="1.6" fill="none"/>
+  <text x="78" y="-7.6" class="tiny">paver path</text>
+
+  <!-- firepit brick patio -->
+  <path class="zone" data-k="firepit" d="M-8,24 H26 V36 H-8Z" fill="var(--brick)" stroke="#a96a55"/>
+  <circle cx="6" cy="31" r="2" fill="#b4553a"/><text x="6" y="34.6" class="lbl2">firepit + 4 egg chairs</text>
+  <path d="M-1,25.5 L9,26.5" stroke="#3b6aa0" stroke-width=".9"/><text x="-6" y="28.5" class="tiny">hammock</text>
+  <path d="M-8,37 H26" stroke="#7d7468" stroke-width=".9"/><text x="-7.5" y="38.8" class="tiny">stone wall</text>
+  <rect x="20" y="25" width="3" height="2" fill="#333"/><text x="17.8" y="29" class="tiny">BBQ</text>
+  <text x="9" y="23.2" class="tiny" style="fill:#7a4b3b">brick patio at grade</text>
+
+  <!-- deck -->
+  <rect class="zone" data-k="deck" x="26" y="24" width="48" height="13" fill="var(--deck)" stroke="#8c6a4f"/>
+  <path d="M26,37 H74 V24" stroke="#2b2622" stroke-width=".55" fill="none"/>
+  <rect x="38" y="27.5" width="9" height="4" class="furn" style="stroke:#6d5440;stroke-width:.25"/>
+  <text x="42.5" y="34" class="lbl2">deck dining (umbrella)</text>
+  <rect x="61" y="29" width="9" height="5" class="furn" style="stroke:#6d5440;stroke-width:.25"/>
+  <text x="65.5" y="35.8" class="lbl2">lounge set</text>
+  <text x="50" y="26" class="lbl2">deck over the creek, ~12 ft deep</text>
+
+  <!-- east side: iron-table patio, hot tub yard, outdoor shower -->
+  <rect class="zone" data-k="patio" x="82" y="12" width="14" height="14" fill="var(--brick)" stroke="#a96a55"/>
+  <text x="89" y="20" class="lbl2">brick patio</text><text x="89" y="21.6" class="lbl2">iron table</text>
+  <rect class="zone" data-k="hottub" x="84" y="-6" width="20" height="16" fill="#e6d6c3" stroke="#a96a55"/>
+  <rect x="86" y="-4" width="6" height="6" rx=".8" fill="var(--tub)" stroke="#4a8ba6" stroke-width=".25"/>
+  <text x="94" y="3.5" class="lbl2">hot tub yard</text><text x="94" y="5.1" class="lbl2">egg chair · bench</text>
+  <circle class="zone" data-k="shower" cx="99" cy="18" r="2.4" fill="#8a7a5c" stroke="#5b4e38"/>
+  <text x="99" y="23" class="lbl2">oak + outdoor</text><text x="99" y="24.6" class="lbl2">shower</text>
+
+  <!-- HOUSE -->
+  <g id="house"></g>
+
+  <!-- compass -->
+  <g transform="translate(100,-24)"><path d="M0,-3 L1,1 L0,0 L-1,1Z" fill="var(--muted)"/><text x="0" y="3" class="compass" text-anchor="middle">street</text></g>
+  <g transform="translate(-30,56)"><path d="M0,0 H10" stroke="var(--ink)" stroke-width=".3"/><path d="M0,-.6 V.6 M10,-.6 V.6" stroke="var(--ink)" stroke-width=".3"/><text x="5" y="-1" class="tiny" text-anchor="middle">10 ft (approx.)</text></g>
+</svg>
+<div class="legend">
+  <span><i style="background:#5a9ec0"></i>window</span>
+  <span><i style="background:#2f7fae;height:6px"></i>sliding glass door</span>
+  <span><i style="background:#b5562f;height:6px"></i>door / barn door</span>
+  <span><i style="background:none;border-top:2px dashed #a0958a;height:0"></i>low-confidence wall</span>
+  <span><svg width="12" height="12" viewBox="-1.2 -1.2 2.4 2.4" style="display:inline;width:12px;vertical-align:-1px"><path class="star" d="M0,-1 L.29,-.4 .95,-.31 .48,.15 .59,.81 0,.5 -.59,.81 -.48,.15 -.95,-.31 -.29,-.4Z"/></svg> suggested proposal spot</span>
+</div>
+</section>
+
+<aside class="card" id="panel">
+  <h2 id="pt">Pick a room</h2>
+  <div class="conf" id="pc"></div>
+  <p id="pd">Click any room or outdoor area on the plan to see what it looks like and how sure I am about its placement.</p>
+  <div class="thumbs" id="pth"></div>
+  <div class="notes">
+    <h3>Connor &amp; Olga: early setup</h3>
+    <ul>
+      <li><b>Room:</b> the fireplace lounge (the star on the plan). Leave it looking like normal Airbnb decor.</li>
+      <li><b>Set out, switched OFF:</b> LED candles (all on one remote), string lights on a remote or smart plug, flowers on the coffee table and mantel, and a speaker on a shelf.</li>
+      <li><b>Clear a spot</b> in front of the fireplace: pull the ottoman back.</li>
+      <li><b>The box</b> (petals, photos, sign, matches, capo): put it in the TV den behind the closed barn door, or in the cabinet under the bar sink. Not in the bedrooms.</li>
+      <li><b>On your way out:</b> close the den's barn door, lower the shades, take your car, and leave the remotes inside the box.</li>
+    </ul>
+  </div>
+  <div class="notes">
+    <h3>For Saturday</h3>
+    <ul>
+      <li><b>The fireplace lounge is the spot.</b> It has a real wood fireplace with lit shelves on both sides, a vaulted ceiling and the white sofa facing the fire. It's the bigger and nicer of the two living rooms.</li>
+      <li><b>It'll be dark by the time you set up.</b> Sunset on Nov 21 is around 4:50pm. After dark, the two sliding doors to the deck turn into black mirrors. Pull down the roller shades above them (you can see them in photo 065), or open them on purpose to show the deck lights.</li>
+      <li><b>She'll probably walk in from the northeast corner,</b> by the front door and the fireplace, because that's where the bedroom hall seems to come out. She'd see the fire right away. Check this when you arrive.</li>
+      <li><b>Sound carries.</b> Both full baths are just east of the lounge, one wall away. Tune or warm up in the car, the carport, or the TV den at the far west end. Keep her shower going as your cover.</li>
+      <li><b>There's a guitar in the TV den,</b> on a stand next to the record console (075). Don't count on it being playable or tuned. Bring your own, and keep it in the car until she's in the shower.</li>
+      <li><b>Lighting:</b> the shelf lamps and fireplace already look great in the photos. Light the fire first, since it takes 15–20 minutes to get going.</li>
+    </ul>
+  </div>
+</aside>
+</main>
+<div id="lb"><img alt=""><span></span></div>
+
+<script>
+// Geometry in feet. x: west(carport) -> east(hot tub). y: north(street) -> south(creek).
+const ROOMS = {
+  den:{n:"TV den",x:0,y:0,w:19,h:24,c:"High",
+    d:"Second living room, vaulted ceiling. Gray L-sectional on the north (street) wall under two windows. 65\" TV, red gas stove, vintage radio/record console and an acoustic guitar on the west wall. Sliding doors on the south open to the brick firepit patio and hammock. A barn door opens east into the dining room.",
+    p:["069","030","016","079","077","073","075","036","059","035","038"]},
+  nook:{n:"Bar / side entry",s:"Bar",x:-6,y:13,w:6,h:6,c:"Medium",low:1,
+    d:"Wet bar with sink, wine fridge and a keypad-locked exterior door. It opens off the den's west wall next to the gas stove. Probably the carport-side entrance.",p:["062","087"]},
+  dining:{n:"Dining",x:19,y:0,w:15,h:12,c:"High",
+    d:"Round oak table for 6 under a sputnik chandelier. Gray accent wall with an arched mirror. Two windows on the north look at the street fence. A barn-door opening goes west to the den. An opening at the southeast corner leads to the kitchen and the fireplace lounge.",p:["025","060","049","015"]},
+  laundry:{n:"Laundry + ½ bath",s:"Lndry",x:19,y:12,w:5,h:12,c:"Low",low:1,
+    d:"Washer/dryer and a toilet. The photos don't show exactly where it is. I placed it behind the louvered door that shows up between the dining room and kitchen.",p:["043","057"]},
+  kitchen:{n:"Kitchen",x:24,y:12,w:10,h:12,c:"Medium-high",
+    d:"U-shaped kitchen with a skylight. The window over the sink faces the deck (the striped umbrella shows through it in 060), so it's on the creek side.",p:["044","060"]},
+  lounge:{n:"Fireplace lounge",x:34,y:0,w:22,h:24,c:"High",star:1,
+    d:"The main living room, under the big gable with clerestory glass at both ends. Wood-burning fireplace on the east wall with dark lit shelving on both sides. White sofa on the west wall under the sunset-tree print, facing the fire. Two sliding doors on the south open onto the deck dining table. Credenza under the north windows. The front-door foyer is in the northeast corner.",
+    p:["065","055","070","039","061","022","052","054","041","088"]},
+  foyer:{n:"Foyer",x:56,y:0,w:6,h:8,c:"Medium",
+    d:"The front door from the porch, a coat wall with hats, and a glass-paneled side door. It's next to the fireplace, so this is probably the corner she'll walk in from.",p:["045","052"]},
+  hall:{n:"Hall",x:56,y:8,w:14,h:4,c:"Low",low:1,
+    d:"Assumed hallway into the bedroom wing. In photo 046 you can see a hall running from the bathroom to the primary bedroom.",p:["046"]},
+  bath1:{n:"Full bath 1",x:62,y:0,w:8,h:8,c:"Low",low:1,
+    d:"Green walls, tiled vanity and a glass shower enclosure. Frosted window.",p:["053"]},
+  bath2:{n:"Full bath 2",x:58,y:12,w:8,h:12,c:"Medium",low:1,
+    d:"Double glass-paneled doors, arched mirror and a vanity with a makeup knee-space. It opens onto the hall toward the primary bedroom (robe and chair visible in 046). The small window right of the chimney in the creek-side drone shot (014) is probably this room.",p:["046"]},
+  primary:{n:"Primary (king)",x:66,y:12,w:16,h:12,c:"Medium-high",
+    d:"King bed against a charcoal half-moon painted headboard, beamed ceiling, built-in shelves. Glass on two walls: a sliding door straight onto the deck lounge area, plus a corner slider or window. The listing says the primary has 'direct access to the deck.'",p:["084","048","080","026"]},
+  bed2:{n:"Bedroom 2 (queen)",x:70,y:0,w:12,h:12,c:"Medium",
+    d:"Sleep Number queen bed in an arched green leaf-mural alcove, with a window behind the bed facing the street fence. A desk next to a sliding door that opens east onto the brick patio with the iron table and the big oak.",p:["021","066","017","020"]},
+};
+const ZONES = {
+  deck:{n:"Deck over the creek",c:"High",d:"About 48 ft long and elevated over the creek bank. Dining table for 6 with a striped umbrella outside the lounge sliders. Lounge sofa and chairs at the east end outside the primary bedroom. The BBQ and blue stools are at the west end by the kitchen.",p:["034","047","083","081","028","064"]},
+  firepit:{n:"Firepit patio + hammock",c:"High",d:"Brick patio at grade at the west end, behind a stone wall along the creek. Gas firepit with four yellow egg chairs. Hammock under the roof overhang right outside the den's sliding doors.",p:["029","031","085","032","076"]},
+  creek:{n:"Creek",c:"High",d:"Year-round creek running along the whole back of the property. The yellow chairs and Adirondack chair in the photos are down on the gravel bank.",p:["014","018","056","019","071"]},
+  hottub:{n:"Hot tub yard",c:"Medium-high",d:"Enclosed in low brick walls at the east end, near the street fence. Hot tub, hanging egg chair, bench and coffee table. Reached by a paver path from the front porch.",p:["033","050","058","063","023","024","074","040"]},
+  shower:{n:"Outdoor shower (oak)",c:"Medium",d:"The outdoor shower is mounted on the big oak by the east lawn, with robes hanging from it.",p:["082","051","067","078"]},
+  patio:{n:"Brick patio (iron table)",c:"Medium",d:"Bistro table with four chairs outside bedroom 2's sliding door, beside the big oak.",p:["027"]},
+  front:{n:"Front / carport",c:"High",d:"Street side: board-and-batten ranch house, carport at the west (den) end, covered porch with the front door near the middle-east.",p:["068","072","086","037"]},
+  drive:{n:"Driveway",c:"Medium",d:"Gravel parking between the road fence and the house.",p:["037","068"]},
+};
+const W = [ // [x1,y1,x2,y2,cls]
+  // den
+  [4,0,8,0,"win"],[10,0,14,0,"win"],[3,24,9,24,"slider"],[10,24,15,24,"slider"],[19,2,19,9,"door"],[0,14,0,18,"door"],
+  // nook ext door
+  [-6,15,-6,18,"door"],
+  // dining
+  [22,0,26,0,"win"],[27,0,31,0,"win"],[34,9,34,12,"door"],
+  // kitchen
+  [26,24,32,24,"win"],
+  // lounge
+  [36,24,42,24,"slider"],[43,24,49,24,"slider"],[39,0,44,0,"win"],[45,0,50,0,"win"],
+  // foyer front door
+  [57.5,0,60.5,0,"door"],[56,4,56,7.5,"door"],
+  // baths
+  [64,0,67,0,"win"],[60,24,63,24,"win"],
+  // primary
+  [70,24,77,24,"slider"],[82,15,82,21,"slider"],
+  // bed2
+  [74,0,78,0,"win"],[82,3,82,9,"slider"],
+];
+const S = "http://www.w3.org/2000/svg";
+const g = document.getElementById("house");
+const el=(t,a,p=g)=>{const e=document.createElementNS(S,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+// slab shadow
+el("rect",{x:-6.4,y:-.4,width:88.8,height:24.8,fill:"#d8cfc2"});
+for(const [k,r] of Object.entries(ROOMS)){
+  const e=el("rect",{x:r.x,y:r.y,width:r.w,height:r.h,class:"room"+(r.low?" low":""),"data-k":k});
+  const cy=r.y+r.h/2;
+  const t=el("text",{x:r.x+r.w/2,y:cy-(r.h<9?0:.4),class:"lbl"});t.textContent=r.s||r.n;
+  if(r.h>=9&&!r.s){const t2=el("text",{x:r.x+r.w/2,y:cy+1.6,class:"lbl2"});t2.textContent="~"+r.w+"×"+r.h+" ft";}
+  if(r.n.length*0.9>r.w) t.style.fontSize="1.05px";
+}
+// chimney + fireplace
+el("rect",{x:54.6,y:9,width:2.8,height:6,fill:"#9b5a44"});
+el("rect",{x:52.6,y:6,width:2,height:3,class:"furn"});el("rect",{x:52.6,y:15,width:2,height:3,class:"furn"});
+// lounge furniture: sofa west wall facing fireplace, ottoman
+el("rect",{x:35,y:7,width:3,height:10,class:"furn"});el("rect",{x:42,y:9.5,width:4,height:5,class:"furn"});
+// den sectional + TV
+el("path",{d:"M4,1 H15 V3 H6 V9 H4Z",class:"furn"});el("rect",{x:.4,y:7,width:.8,height:5,fill:"#444"});
+el("rect",{x:.6,y:19,width:1.6,height:1.6,fill:"#a33"});
+// star
+const star=el("path",{class:"star",transform:"translate(45,18) scale(1.5)",d:"M0,-1 L.29,-.4 .95,-.31 .48,.15 .59,.81 0,.5 -.59,.81 -.48,.15 -.95,-.31 -.29,-.4Z"});
+const st=el("text",{x:45,y:21.4,class:"lbl2"});st.textContent="★ spot: face the fire";
+const tf=el("text",{x:53.6,y:12,class:"tiny",transform:"rotate(-90 53 12.4)","text-anchor":"middle"});tf.textContent="fireplace";
+for(const [x1,y1,x2,y2,c] of W) el("line",{x1,y1,x2,y2,class:c});
+// interactions
+const pt=document.getElementById("pt"),pc=document.getElementById("pc"),pd=document.getElementById("pd"),pth=document.getElementById("pth");
+function show(k){
+  const r=ROOMS[k]||ZONES[k]; if(!r) return;
+  document.querySelectorAll(".sel").forEach(e=>e.classList.remove("sel"));
+  document.querySelectorAll(`[data-k="${k}"]`).forEach(e=>e.classList.add("sel"));
+  pt.textContent=r.n; pc.textContent="Placement confidence: "+r.c; pd.textContent=r.d;
+  pth.innerHTML=r.p.map(n=>`<img loading="lazy" src="photos/${n}.jpg" alt="Photo ${n}" data-n="${n}">`).join("");
+}
+document.getElementById("plan").addEventListener("click",e=>{const k=e.target.closest("[data-k]");if(k)show(k.dataset.k)});
+const lb=document.getElementById("lb");
+pth.addEventListener("click",e=>{if(e.target.tagName==="IMG"){lb.querySelector("img").src=e.target.src;lb.querySelector("span").textContent="Listing photo "+e.target.dataset.n;lb.style.display="flex"}});
+lb.addEventListener("click",()=>lb.style.display="none");
+show("lounge");
+</script>
+</body>
+</html>
