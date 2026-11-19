@@ -166,6 +166,50 @@ def check_parks():
     return dict(new=new, closure=closure, baseline=bool(base), all=alerts)
 
 
+# Counties each highway actually crosses on the Sac → Kenwood/Guerneville route. Caltrans
+# reports a whole highway at once, so without this a San Jose closure shows up for Hwy 101.
+ROUTE_COUNTIES = {
+    "80": ["Sacramento", "Yolo", "Solano"],
+    "12": ["Solano", "Napa", "Sonoma"],
+    "101": ["Sonoma"],
+    "116": ["Sonoma"],
+    "37": ["Solano", "Napa", "Sonoma", "Marin"],
+}
+# A Caltrans item wraps over several lines; these openings mark the start of a new one.
+ITEM_START = re.compile(
+    r"^(The (north|south|east|west)bound|(North|South|East|West)bound (traffic|lanes?|connector)|Both directions|"
+    r"Is (closed|restricted|reduced)|Are |A [\w-]+( [\w-]+)? (advisory|warning)|Chains (are|may)|Please |No traffic|"
+    r"Traffic |\d+-way|(One|Two|\d) lanes? )")
+
+
+def route_items(hw, lines):
+    """Caltrans text lines for one highway → only the items in counties on our route."""
+    counties = ROUTE_COUNTIES.get(hw, [])
+    items, section = [], ""
+    for l in lines:
+        if l.startswith("-->"):
+            break
+        if l.startswith("["):
+            section = l
+            continue
+        if not items or ITEM_START.match(l) or items[-1][0] != section:
+            items.append([section, l])
+        else:
+            items[-1][1] += " " + l
+    keep = []
+    for section, txt in items:
+        if txt.startswith(("No traffic", "Please research")):
+            continue
+        if re.search(r"\bCo\b", txt):  # names a county: keep only ours
+            ok = any(re.search(rf"\b{c}\b[^()]{{0,40}}?\bCo\b", txt) for c in counties)
+        else:  # no county named: keep it if it's in the Bay Area / central section
+            ok = ("CENTRAL" in section or "SAN FRANCISCO" in section) and "SIERRA" not in section
+        if ok:
+            keep.append(txt)
+    where = "/".join(counties) + " Co" if counties else "this area"
+    return " · ".join(keep) or f"No restrictions reported in {where}."
+
+
 def check_roads():
     out = {}
     for r in HIGHWAYS:
@@ -174,15 +218,7 @@ def check_roads():
             t = html.unescape(re.sub(r"<[^>]+>", "\n", t))
             lines = [l.strip() for l in t.splitlines() if l.strip()]
             i = next((k for k, l in enumerate(lines) if l.startswith("SR ") or l.startswith("I ") or l.startswith("US ")), None)
-            body = " ".join(lines[i + 1:]) if i is not None else ""
-            body = body.split("-->")[0]
-            # keep only the Bay Area / central section(s)
-            parts = re.split(r"(\[IN [^\]]+\])", body)
-            keep = []
-            for k in range(1, len(parts) - 1, 2):
-                if ("CENTRAL" in parts[k] or "SAN FRANCISCO" in parts[k]) and "SIERRA" not in parts[k]:
-                    keep.append(parts[k] + " " + parts[k + 1].strip())
-            out[r] = " ".join(keep).strip() or body.strip()[:800]
+            out[r] = route_items(r, lines[i + 1:] if i is not None else [])
         except Exception as e:
             out[r] = f"(check failed: {e})"
     return out

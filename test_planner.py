@@ -204,5 +204,30 @@ class Model(unittest.TestCase):
         self.assertEqual(p["by_departure"][-1]["id"], "LATE")
 
 
+class TestRouteItems(unittest.TestCase):
+    def test_drops_other_counties_and_joins_wrapped_lines(self):
+        import autocheck as A
+        lines = ["[IN THE CENTRAL CALIFORNIA AREA]",
+                 "Is closed to southbound traffic from Brokaw Ave to the Jct of I 880 /in San Jose/",
+                 "(Santa Clara Co) - Due to flooding - Motorists are advised to use an alternate route",
+                 "The northbound connector to northbound SR 1 (Marin Co) is closed",
+                 "- Due to flooding",
+                 "Northbound traffic is reduced to 1 lane at Todd Rd /near Santa Rosa/",
+                 "(Sonoma Co) - Due to a traffic collision",
+                 "[IN THE NORTHERN CALIFORNIA AREA]",
+                 "Northbound traffic is reduced to 1 lane at Pepperwood (Humboldt Co) - Due",
+                 "to a traffic collision", "-->"]
+        self.assertEqual(A.route_items("101", lines),
+                         "Northbound traffic is reduced to 1 lane at Todd Rd /near Santa Rosa/ (Sonoma Co) - Due to a traffic collision")
+        self.assertIn("Marin Co", A.route_items("37", lines))
+
+    def test_nothing_on_route(self):
+        import autocheck as A
+        self.assertEqual(A.route_items("12", ["[IN THE CENTRAL CALIFORNIA AREA]", "No traffic restrictions are reported for this area."]),
+                         "No restrictions reported in Solano/Napa/Sonoma Co.")
+        self.assertTrue(P.sonoma_closure(A.route_items("101", ["[IN THE CENTRAL CALIFORNIA AREA]",
+                        "Is closed from River Rd to Steele Ln (Sonoma Co) - Due to flooding"])))
+
+
 if __name__ == "__main__":
     unittest.main()
